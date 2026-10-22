@@ -1,8 +1,32 @@
 \documentclass[conference]{IEEEtran}
-\usepackage{amsmath,graphicx,booktabs,array}
+\usepackage{amsmath,graphicx,booktabs,array,url}
+\urlstyle{same}
 \title{Reliability-Gated Adaptive Sensing for Fault-Resilient Human Activity Recognition in Wearable IoT}
-\author{\IEEEauthorblockN{Anusuya M\IEEEauthorrefmark{1}, Vemba Kumar R\IEEEauthorrefmark{1}, and Tailam Praneeth\IEEEauthorrefmark{1}}
-\IEEEauthorblockA{\IEEEauthorrefmark{1}School of Computer Engineering, Manipal Institute of Technology, MAHE, Manipal, India}}
+\author{
+\IEEEauthorblockN{Anusuya M}
+\IEEEauthorblockA{\footnotesize
+\textit{School of Computer Engineering}\\
+\textit{Manipal Institute of Technology, MAHE}\\
+Manipal, Karnataka, India\\
+Reg. No.: 240953480\\
+\url{anusuya.mitmpl2024@learner.manipal.edu}}
+\and
+\IEEEauthorblockN{Vemba Kumar R}
+\IEEEauthorblockA{\footnotesize
+\textit{School of Computer Engineering}\\
+\textit{Manipal Institute of Technology, MAHE}\\
+Manipal, Karnataka, India\\
+Reg. No.: 240953502\\
+\url{vemba.mitmpl2024@learner.manipal.edu}}
+\and
+\IEEEauthorblockN{Tailam Praneeth}
+\IEEEauthorblockA{\footnotesize
+\textit{School of Computer Engineering}\\
+\textit{Manipal Institute of Technology, MAHE}\\
+Manipal, Karnataka, India\\
+Reg. No.: 240953532\\
+\url{tailam.mitmpl2024@learner.manipal.edu}}
+}
 \begin{document}
 \maketitle
 \begin{abstract}
@@ -187,6 +211,35 @@ All weighted, selected RF & $0.8540\pm0.1114$ & 1.0000 \\
 \end{figure}
 
 At moderate wrist dropout, fixed-six macro-F1 was 0.7559 for the selected adaptive method, 0.8217 for all-uniform, and 0.8112 for all-weighted fusion. For moderate Gaussian noise the scores were 0.6471, 0.7630, and 0.7922; for moderate combined corruption they were 0.6766, 0.7661, and 0.7978, respectively. The full six-fault, three-severity grid is saved with the run. Figure~\ref{fig:nested_dropout} shows the selected method below both all-sensor comparators at each tested dropout severity. The cost budget limits redundancy under faults. The largest clean loss occurred on subject 105: 0.7319 selected versus 0.8474 original under the fixed-six metric. Single-subject inner validation did not reliably predict another person's performance. The original 50-tree configuration therefore remains the recommended tested setting; no significance or broad generalization claim follows from these eight folds.
+
+\subsection{Subject-Level Error Analysis}
+Table~\ref{tab:subject_nested} exposes the held-out scores behind the means in Table~\ref{tab:nested_clean}. Each row compares the validation-selected model and policy with the original 50-tree model and original policy replayed on the \emph{same} subject, using the same fixed-six-class definition. The table reports every test subject rather than selecting a favorable fold. Subjects 102 and 103 are unchanged because inner validation retained both original choices. Subject 104 is the only fold with a positive selected-minus-original clean difference, and that difference is 0.0038. The largest decline, 0.1155 on subject 105, exceeds the small gains elsewhere and materially affects the eight-subject mean. Subject 103 has only four true classes in the selected six-class task; assigning zero F1 to the other two classes lowers both configurations equally in this within-subject comparison.
+
+\begin{table}[t]
+\caption{Nested clean fixed-six macro-F1 by held-out subject. The difference is selected minus replayed original; $n$ is the number of test windows.}
+\centering\footnotesize
+\begin{tabular}{r r c c r}
+\toprule Subject & $n$ & Original & Selected & Difference \\
+\midrule
+101 & 1080 & 0.8112 & 0.7864 & $-0.0248$ \\
+102 & 1068 & 0.9302 & 0.9302 & $+0.0000$ \\
+103 & 778 & 0.5875 & 0.5875 & $+0.0000$ \\
+104 & 991 & 0.7592 & 0.7629 & $+0.0038$ \\
+105 & 1192 & 0.8474 & 0.7319 & $-0.1155$ \\
+106 & 1081 & 0.9266 & 0.9121 & $-0.0145$ \\
+107 & 955 & 0.9244 & 0.9189 & $-0.0056$ \\
+108 & 1128 & 0.9555 & 0.9520 & $-0.0035$ \\
+\bottomrule
+\end{tabular}
+\label{tab:subject_nested}
+\end{table}
+
+The selection outcomes help localize the trade-off. The 100-tree candidate was chosen in six folds, but selected forests paired with the \emph{original} policy reached 0.8418 mean clean F1 at cost 0.5278. Pairing those forests with the selected policies yielded 0.8227 at cost 0.5310. Thus, changing the policy after model selection coincided with most of the observed aggregate clean loss; model-policy interactions prevent a stronger causal attribution. On subject 105, the conservative policy reduced its clean proxy cost from 0.5159 to 0.4502 and its switches from 169 to 133, while fixed-six clean F1 fell from 0.8474 to 0.7319. On subject 104, early reinforcement raised the cost from 0.5742 to 0.6199 for a 0.0038 F1 gain. These paired outcomes show why a single validation subject is an unstable guide to the recognition--cost trade-off on another person.
+
+\subsection{Reproducibility and Measurement Boundaries}
+The nested run records a clean test and 18 faulted tests per held-out fold: six fault constructions at mild, moderate, and severe settings. Its protocol records the model candidates, policy thresholds, objective weights, and random seed. The saved per-fold records contain the chosen model and policy, validation scores, test metrics, and cost traces; clean and moderate-dropout adaptive logs retain predictions and active masks window by window. Recomputing F1 from those predictions and toggles from adjacent masks checks the aggregate independently of its CSV export. The result figures are generated from the saved records rather than drawn from the manuscript's rounded values.
+
+The cost $C(A_t)$ counts active IMUs with equal weights. It omits sensor warm-up, radio retransmissions, computation, battery chemistry, and the cost of a control message. A mask toggle is therefore a stability indicator, not a measured switching-energy penalty. Likewise, fault-detection AUROC evaluates the injected labels supplied by the simulator; thresholded detection F1 reveals that a high ranking score does not guarantee reliable alarms at the chosen threshold. Host-side replay time includes caching and batching and cannot establish latency on a wearable gateway. These boundaries are important when interpreting the 47.2\% proxy reduction: it is a reproducible property of the logged masks, while physical energy savings remain a future measurement.
 
 \begin{figure}[t]
 \centering\includegraphics[width=\columnwidth]{figures/nested_dropout_severity.png}
