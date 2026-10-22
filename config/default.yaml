@@ -1,0 +1,108 @@
+experiment:
+  name: "reliability_gated_har"
+  version: "1.0.0"
+  random_seed: 42
+
+dataset:
+  raw_dir: "data/raw"
+  download_url: "https://archive.ics.uci.edu/static/public/231/pamap2%2Bphysical%2Bactivity%2Bmonitoring.zip"
+  sampling_rate: 100
+  window_size: 256
+  window_stride: 128
+  label_purity_threshold: 0.80
+  doi: "10.24432/C5NW2H"
+  citation: 'A. Reiss and D. Stricker, "Introducing a new benchmarked dataset for activity monitoring," in Proceedings of the 16th International Symposium on Wearable Computers, 2012, pp. 108–109.'
+  
+  # Full evaluation subjects
+  all_subjects: [101, 102, 103, 104, 105, 106, 107, 108, 109]
+  # Quick dev mode subjects
+  quick_subjects: [101, 102, 105]
+
+  # Protocol activities selected for evaluation
+  activities:
+    1: "Lying"
+    2: "Sitting"
+    3: "Standing"
+    4: "Walking"
+    5: "Running"
+    6: "Cycling"
+
+  # Sensors and 0-based column indices (total 54 cols)
+  # IMU hand (wrist): 4..6 (accel +-16g), 10..12 (gyro)
+  # IMU chest: 21..23 (accel +-16g), 27..29 (gyro)
+  # IMU ankle: 38..40 (accel +-16g), 44..46 (gyro)
+  sensors:
+    wrist:
+      accel_cols: [4, 5, 6]
+      gyro_cols: [10, 11, 12]
+      cost_weight: 1.0
+    chest:
+      accel_cols: [21, 22, 23]
+      gyro_cols: [27, 28, 29]
+      cost_weight: 1.0
+    ankle:
+      accel_cols: [38, 39, 40]
+      gyro_cols: [44, 45, 46]
+      cost_weight: 1.0
+
+models:
+  random_forest:
+    n_estimators: 100
+    max_depth: 15
+    min_samples_leaf: 2
+    class_weight: "balanced"
+    n_jobs: -1
+    random_state: 42
+  
+  cnn_lstm:
+    input_channels: 6
+    sequence_length: 256
+    conv1_filters: 32
+    conv1_kernel: 7
+    conv2_filters: 64
+    conv2_kernel: 5
+    lstm_hidden: 64
+    dropout: 0.3
+    learning_rate: 0.001
+    batch_size: 64
+    epochs: 15
+    patience: 3
+    random_state: 42
+
+reliability:
+  weights:
+    missing_ratio: 0.35
+    flatline: 0.30
+    noise: 0.20
+    clipping: 0.15
+  thresholds:
+    flatline_var: 1.0e-4
+    noise_diff_var: 50.0
+    clipping_accel: 155.0
+
+adaptive_policy:
+  anchor_sensor: "wrist"
+  r_low: 0.40
+  r_good: 0.70
+  u_high: 0.65
+  u_low: 0.35
+  min_dwell_windows: 4
+  probe_interval: 20
+  cost_budget: 1.0
+
+fault_injection:
+  scenarios:
+    - "dropout"
+    - "intermittent"
+    - "noise"
+    - "flatline"
+    - "drift"
+  severities:
+    mild: 0.25
+    moderate: 0.50
+    severe: 0.85
+  random_state: 42
+
+paths:
+  results_dir: "results/runs"
+  report_assets_dir: "report_assets"

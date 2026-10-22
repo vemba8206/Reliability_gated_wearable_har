@@ -1,0 +1,18 @@
+\begin{table}[htbp]
+\caption{Dataset Acquisition and Signal Preprocessing Specifications}
+\label{tab:dataset_specs}
+\centering
+\begin{tabular}{lc}
+\hline
+Parameter & Specification \\ \hline
+Dataset & PAMAP2 Physical Activity Monitoring (DOI: 10.24432/C5NW2H) \\
+Subjects Evaluated & 3 Participants (LOSO Cross-Validation) \\
+Sampling Rate & 100 Hz \\
+Window Length & 2.56 s (256 samples) \\
+Window Stride & 1.28 s (128 samples, 50\% overlap) \\
+Label Purity Threshold & 0.80 (transitional windows discarded) \\
+Sensor Locations & Wrist, Chest, Ankle \\
+Channels per IMU & 6 channels (3D Accel +-16g, 3D Gyroscope) \\
+\hline
+\end{tabular}
+\end{table}

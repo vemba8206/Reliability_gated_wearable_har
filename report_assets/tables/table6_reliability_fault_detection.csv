@@ -1,0 +1,6 @@
+Metric,Observed Value
+AUROC,0.9620
+Detection Precision,0.9310
+Detection Recall,0.9450
+Detection F1,0.9379
+False-Alarm Rate (FAR),0.0380

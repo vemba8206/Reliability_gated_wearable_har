@@ -1,0 +1,6 @@
+Fault Scenario (50% Severity),All Uniform F1,All Rel-Weighted F1,Proposed Adaptive F1,F1 Degradation (pp),Normalized Cost C(t)
+Dropout,0.4788,0.4788,0.5176,28.03 pp,0.98
+Intermittent,0.4900,0.4900,0.5292,26.88 pp,0.98
+Noise,0.3506,0.4519,0.2370,56.09 pp,0.52
+Flatline,0.6594,0.6594,0.7116,8.64 pp,0.69
+Drift,0.4546,0.4546,0.2541,54.38 pp,0.52

@@ -1,0 +1,16 @@
+\begin{table}[htbp]
+\caption{HAR Recognition Performance Across Baselines on Clean Benchmark Data}
+\label{tab:clean_comparison}
+\centering
+\begin{tabular}{lccccc}
+\hline
+Baseline Architecture & Classifier & Accuracy & Macro-F1 & Normalized Cost C(t) & Inference Latency (ms) \\ \hline
+Wrist Only (Single Anchor) & RF & 0.8776 +/- 0.0000 & 0.8819 +/- 0.0000 & 0.33 & 0.60 \\
+Wrist + Chest (Static Uniform) & RF & 0.9184 +/- 0.0000 & 0.9190 +/- 0.0000 & 0.67 & 1.09 \\
+All Sensors (Uniform Fusion) & RF & 0.7347 +/- 0.0000 & 0.7376 +/- 0.0000 & 1.00 & 1.66 \\
+All Sensors (Reliability-Weighted) & RF & 0.7347 +/- 0.0000 & 0.7376 +/- 0.0000 & 1.00 & 3.36 \\
+Proposed Reliability-Gated Adaptive & RF & 0.7959 +/- 0.0000 & 0.7980 +/- 0.0000 & 0.52 & 2.76 \\
+Proposed Reliability-Gated Adaptive & CNN-LSTM & 0.4694 +/- 0.0000 & 0.3746 +/- 0.0000 & 0.98 & 1.51 \\
+\hline
+\end{tabular}
+\end{table}

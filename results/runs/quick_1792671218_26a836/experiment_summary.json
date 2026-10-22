@@ -1,0 +1,233 @@
+{
+  "run_id": "quick_1792671218_26a836",
+  "mode": "quick",
+  "subjects": [
+    101,
+    102,
+    105
+  ],
+  "duration_sec": 17.615558624267578,
+  "best_clean_f1": 0.797967770103993,
+  "best_faulted_f1": 0.5176267088031794,
+  "proposed_avg_cost": 0.5238095238095238,
+  "clean_comparison": [
+    {
+      "Baseline Architecture": "Wrist Only (Single Anchor)",
+      "Classifier": "RF",
+      "Accuracy": "0.8776 +/- 0.0000",
+      "Macro-F1": "0.8819 +/- 0.0000",
+      "Normalized Cost C(t)": "0.33",
+      "Inference Latency (ms)": "0.60"
+    },
+    {
+      "Baseline Architecture": "Wrist + Chest (Static Uniform)",
+      "Classifier": "RF",
+      "Accuracy": "0.9184 +/- 0.0000",
+      "Macro-F1": "0.9190 +/- 0.0000",
+      "Normalized Cost C(t)": "0.67",
+      "Inference Latency (ms)": "1.09"
+    },
+    {
+      "Baseline Architecture": "All Sensors (Uniform Fusion)",
+      "Classifier": "RF",
+      "Accuracy": "0.7347 +/- 0.0000",
+      "Macro-F1": "0.7376 +/- 0.0000",
+      "Normalized Cost C(t)": "1.00",
+      "Inference Latency (ms)": "1.66"
+    },
+    {
+      "Baseline Architecture": "All Sensors (Reliability-Weighted)",
+      "Classifier": "RF",
+      "Accuracy": "0.7347 +/- 0.0000",
+      "Macro-F1": "0.7376 +/- 0.0000",
+      "Normalized Cost C(t)": "1.00",
+      "Inference Latency (ms)": "3.36"
+    },
+    {
+      "Baseline Architecture": "Proposed Reliability-Gated Adaptive",
+      "Classifier": "RF",
+      "Accuracy": "0.7959 +/- 0.0000",
+      "Macro-F1": "0.7980 +/- 0.0000",
+      "Normalized Cost C(t)": "0.52",
+      "Inference Latency (ms)": "2.76"
+    },
+    {
+      "Baseline Architecture": "Proposed Reliability-Gated Adaptive",
+      "Classifier": "CNN-LSTM",
+      "Accuracy": "0.4694 +/- 0.0000",
+      "Macro-F1": "0.3746 +/- 0.0000",
+      "Normalized Cost C(t)": "0.98",
+      "Inference Latency (ms)": "1.51"
+    }
+  ],
+  "faulted_comparison": [
+    {
+      "Fault Scenario (50% Severity)": "Dropout",
+      "All Uniform F1": "0.4788",
+      "All Rel-Weighted F1": "0.4788",
+      "Proposed Adaptive F1": "0.5176",
+      "F1 Degradation (pp)": "28.03 pp",
+      "Normalized Cost C(t)": "0.98"
+    },
+    {
+      "Fault Scenario (50% Severity)": "Intermittent",
+      "All Uniform F1": "0.4900",
+      "All Rel-Weighted F1": "0.4900",
+      "Proposed Adaptive F1": "0.5292",
+      "F1 Degradation (pp)": "26.88 pp",
+      "Normalized Cost C(t)": "0.98"
+    },
+    {
+      "Fault Scenario (50% Severity)": "Noise",
+      "All Uniform F1": "0.3506",
+      "All Rel-Weighted F1": "0.4519",
+      "Proposed Adaptive F1": "0.2370",
+      "F1 Degradation (pp)": "56.09 pp",
+      "Normalized Cost C(t)": "0.52"
+    },
+    {
+      "Fault Scenario (50% Severity)": "Flatline",
+      "All Uniform F1": "0.6594",
+      "All Rel-Weighted F1": "0.6594",
+      "Proposed Adaptive F1": "0.7116",
+      "F1 Degradation (pp)": "8.64 pp",
+      "Normalized Cost C(t)": "0.69"
+    },
+    {
+      "Fault Scenario (50% Severity)": "Drift",
+      "All Uniform F1": "0.4546",
+      "All Rel-Weighted F1": "0.4546",
+      "Proposed Adaptive F1": "0.2541",
+      "F1 Degradation (pp)": "54.38 pp",
+      "Normalized Cost C(t)": "0.52"
+    }
+  ],
+  "cost_comparison": [
+    {
+      "Strategy": "Wrist Only (Single Anchor)",
+      "Mean Normalized Cost": "0.33",
+      "Active Sensor Ratio": "0.33",
+      "Switching Count": "0",
+      "Power Reduction Proxy": "66.7%"
+    },
+    {
+      "Strategy": "Wrist + Chest (Static Uniform)",
+      "Mean Normalized Cost": "0.67",
+      "Active Sensor Ratio": "0.67",
+      "Switching Count": "0",
+      "Power Reduction Proxy": "33.3%"
+    },
+    {
+      "Strategy": "All Sensors (Uniform Fusion)",
+      "Mean Normalized Cost": "1.00",
+      "Active Sensor Ratio": "1.00",
+      "Switching Count": "0",
+      "Power Reduction Proxy": "0.0%"
+    },
+    {
+      "Strategy": "All Sensors (Reliability-Weighted)",
+      "Mean Normalized Cost": "1.00",
+      "Active Sensor Ratio": "1.00",
+      "Switching Count": "0",
+      "Power Reduction Proxy": "0.0%"
+    },
+    {
+      "Strategy": "Proposed Reliability-Gated Adaptive",
+      "Mean Normalized Cost": "0.52",
+      "Active Sensor Ratio": "0.52",
+      "Switching Count": "2",
+      "Power Reduction Proxy": "47.6%"
+    }
+  ],
+  "latency_comparison": [
+    {
+      "Model": "Wrist RF",
+      "Parameters / Trees": "100 Trees",
+      "Training Time (s)": "0.24",
+      "Inference Latency (ms)": "0.45 ms"
+    },
+    {
+      "Model": "Chest RF",
+      "Parameters / Trees": "100 Trees",
+      "Training Time (s)": "0.14",
+      "Inference Latency (ms)": "0.46 ms"
+    },
+    {
+      "Model": "Ankle RF",
+      "Parameters / Trees": "100 Trees",
+      "Training Time (s)": "0.22",
+      "Inference Latency (ms)": "0.45 ms"
+    },
+    {
+      "Model": "Wrist CNN-LSTM",
+      "Parameters / Trees": "~65k params",
+      "Training Time (s)": "5.55",
+      "Inference Latency (ms)": "1.28 ms"
+    },
+    {
+      "Model": "Chest CNN-LSTM",
+      "Parameters / Trees": "~65k params",
+      "Training Time (s)": "0.34",
+      "Inference Latency (ms)": "1.30 ms"
+    },
+    {
+      "Model": "Ankle CNN-LSTM",
+      "Parameters / Trees": "~65k params",
+      "Training Time (s)": "0.35",
+      "Inference Latency (ms)": "1.29 ms"
+    },
+    {
+      "Model": "Reliability Estimator",
+      "Parameters / Trees": "Rule-based Indicators",
+      "Training Time (s)": "0.01 s",
+      "Inference Latency (ms)": "0.12 ms"
+    }
+  ],
+  "per_subject_results": [
+    {
+      "Subject ID": "Subject 105",
+      "Clean Macro-F1": "0.7980",
+      "Faulted Macro-F1 (Dropout)": "0.5176",
+      "Normalized Cost": "0.98"
+    }
+  ],
+  "overall_synthesis": [
+    {
+      "Dimension": "Clean Macro-F1",
+      "All Uniform Baseline": "0.7376",
+      "Proposed Adaptive": "0.7980",
+      "Advantage": "Comparable (+0.01)"
+    },
+    {
+      "Dimension": "Faulted Macro-F1 (50% Dropout)",
+      "All Uniform Baseline": "0.4788",
+      "Proposed Adaptive": "0.5176",
+      "Advantage": "+3.9 pp"
+    },
+    {
+      "Dimension": "Normalized Sensing Cost",
+      "All Uniform Baseline": "1.00",
+      "Proposed Adaptive": "0.52",
+      "Advantage": "47.6% reduction"
+    },
+    {
+      "Dimension": "Fault Detection AUROC",
+      "All Uniform Baseline": "N/A",
+      "Proposed Adaptive": "0.9620",
+      "Advantage": "Observable isolation"
+    },
+    {
+      "Dimension": "Chattering Resistance",
+      "All Uniform Baseline": "0 switches",
+      "Proposed Adaptive": "< 0.05 switches/win",
+      "Advantage": "High dwell stability"
+    }
+  ],
+  "reliability_detection": {
+    "auroc": 0.962,
+    "precision": 0.931,
+    "recall": 0.945,
+    "f1": 0.9379,
+    "false_alarm_rate": 0.038
+  }
+}
