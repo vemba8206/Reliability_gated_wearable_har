@@ -5,11 +5,12 @@
 \begin{tabular}{lcccc}
 \hline
 Fault Scenario & Physical Phenomenon & Mild (25\%) & Moderate (50\%) & Severe (85\%) \\ \hline
-Dropout & Complete loss of sensor telemetry (zero signal) & 25\% window drop & 50\% window drop & 85\% window drop \\
+Dropout & Unavailable sensor samples (NaN marker) & 25\% window drop & 50\% window drop & 85\% window drop \\
 Intermittent Missing & Transient communication packet loss & 25\% blocks dropped & 50\% blocks dropped & 85\% blocks dropped \\
-Gaussian Noise & Electromagnetic interference / noisy analog stage & std=3.0 m/s\^{}2 & std=6.0 m/s\^{}2 & std=10.2 m/s\^{}2 \\
+Gaussian Noise & Electromagnetic interference / noisy analog stage & noise SD=3 scaled units & noise SD=6 scaled units & noise SD=10.2 scaled units \\
 Stuck-at / Flatline & Sensor hardware lockup / frozen ADC & 25\% samples stuck & 50\% samples stuck & 85\% samples stuck \\
-Bias Drift & Thermal calibration drift / DC bias shift & +5.0 m/s\^{}2 drift & +10.0 m/s\^{}2 drift & +17.0 m/s\^{}2 drift \\
+Bias Drift & Thermal calibration drift / DC bias shift & +5 scaled-unit drift & +10 scaled-unit drift & +17 scaled-unit drift \\
+Combined & Noise and intermittent loss & noise + missing & noise + missing & noise + missing \\
 \hline
 \end{tabular}
 \end{table}

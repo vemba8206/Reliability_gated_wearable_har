@@ -173,7 +173,9 @@ def run_proposed_adaptive(
     estimators: Dict[str, SensorReliabilityEstimator],
     controller: AdaptiveSensingController,
     canonical_classes: List[int],
-    class_names: Optional[Dict[int, str]] = None
+    class_names: Optional[Dict[int, str]] = None,
+    offline_cache: bool = False,
+    uniform_fusion: bool = False
 ) -> Dict[str, Any]:
     """
     Baseline 5 / Proposed Method:
@@ -191,9 +193,13 @@ def run_proposed_adaptive(
 
     t0 = time.time()
 
-    # Precompute per-sensor predictions and reliabilities in vectorized batches
-    precomputed_probs = {s: models[s].predict_proba_aligned(test_windows[s]) for s in ["wrist", "chest", "ankle"]}
-    precomputed_rels = {s: [estimators[s].estimate(test_windows[s][idx])["reliability"] for idx in range(N)] for s in ["wrist", "chest", "ankle"]}
+    # Offline evaluation cache only. These values are never exposed to the
+    # controller or fusion when their sensor is inactive. Timing from this
+    # mode is not a deployment inference-latency measurement.
+    cached_probs = ({s: models[s].predict_proba_aligned(test_windows[s]) for s in ["wrist", "chest", "ankle"]}
+                    if offline_cache else {})
+    cached_rels = ({s: [estimators[s].estimate(test_windows[s][j])["reliability"] for j in range(N)]
+                    for s in ["wrist", "chest", "ankle"]} if offline_cache else {})
 
     # Initial warm-up for window 0: observe currently active mask
     current_active = dict(controller.active_mask)
@@ -206,11 +212,13 @@ def run_proposed_adaptive(
         for sensor in ["wrist", "chest", "ankle"]:
             if current_active[sensor] == 1:
                 # Sensor is active: query observed reliability and model prediction
-                r_val = precomputed_rels[sensor][i]
+                r_val = (cached_rels[sensor][i] if offline_cache else
+                         estimators[sensor].estimate(test_windows[sensor][i])["reliability"])
                 current_reliabilities[sensor] = r_val
                 reliabilities_log[sensor].append(r_val)
 
-                p_val = precomputed_probs[sensor][i]
+                p_val = (cached_probs[sensor][i] if offline_cache else
+                         models[sensor].predict_proba_aligned(test_windows[sensor][i:i+1])[0])
                 current_probabilities[sensor] = p_val
             else:
                 # Inactive sensor: signal is completely HIDDEN from controller and fusion!
@@ -220,7 +228,7 @@ def run_proposed_adaptive(
         # 2. Fuse active sensor probabilities
         fusion_out = fuse_sensor_probabilities(
             active_mask=current_active,
-            reliabilities=current_reliabilities,
+            reliabilities=({s: 1.0 for s in current_reliabilities} if uniform_fusion else current_reliabilities),
             probabilities=current_probabilities
         )
         pred_label = canonical_classes[fusion_out["predicted_idx"]]
@@ -241,10 +249,13 @@ def run_proposed_adaptive(
 
     preds_arr = np.array(preds)
     metrics = compute_classification_metrics(y_test, preds_arr, canonical_classes, class_names)
+    observed_switches = sum(sum(old[s] != new[s] for s in old)
+                            for old, new in zip(masks_log, masks_log[1:]))
+    observed_probes = sum(action == "PROBE" for action in actions_log[:-1])
     cost_metrics = compute_cost_and_efficiency_metrics(
         masks_log,
-        total_switches=controller.total_switches,
-        total_probes=controller.total_probes
+        total_switches=observed_switches,
+        total_probes=observed_probes
     )
 
     return {
@@ -257,5 +268,5 @@ def run_proposed_adaptive(
         "masks": masks_log,
         "reliabilities": reliabilities_log,
         "uncertainties": uncertainties,
-        "latency_ms_per_window": latency_per_win_ms
+        "latency_ms_per_window": None if offline_cache else latency_per_win_ms
     }

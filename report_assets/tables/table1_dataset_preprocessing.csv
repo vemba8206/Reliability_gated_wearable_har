@@ -1,6 +1,6 @@
 Parameter,Specification
 Dataset,PAMAP2 Physical Activity Monitoring (DOI: 10.24432/C5NW2H)
-Subjects Evaluated,3 Participants (LOSO Cross-Validation)
+Subjects Evaluated,8 participants; full_fast evaluation
 Sampling Rate,100 Hz
 Window Length,2.56 s (256 samples)
 Window Stride,"1.28 s (128 samples, 50% overlap)"

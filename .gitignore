@@ -1,49 +1,79 @@
-# Python
+# Python environments and build caches
 __pycache__/
 *.py[cod]
-*$py.class
+*.pyd
 *.so
 .Python
-env/
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# Virtual Environment
-.venv
+.venv/
 venv/
+env/
 ENV/
-
-# Data and large files (never commit raw dataset or ZIP archives)
-data/raw/*.zip
-data/raw/PAMAP2_Dataset/
-data/raw/pamap2/
-*.zip
-*.tar.gz
-*.dat
-
-# Caches & IDEs
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
 .coverage
+.coverage.*
 htmlcov/
+build/
+dist/
+*.egg-info/
+
+# Notebooks and editor/OS scratch
+.ipynb_checkpoints/
 .idea/
 .vscode/
 *.swp
 *.swo
-
-# OS files
+*~
 .DS_Store
 Thumbs.db
-powershell.cmd
+Desktop.ini
+
+# Local credentials and machine-specific settings
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials.json
+
+# Official PAMAP2 data and local preprocessing caches
+/data/raw/
+/data/processed/
+*.npy
+*.npz
+*.dat
+*.tar.gz
+*.zip
+!/overleaf_report.zip
+
+# Saved final summaries, plots, and run JSON remain eligible for Git.
+# Large model checkpoints are local; reproduce with the documented commands.
+/results/runs/**/subject_*_models/
+/results/runs/**/subject_*_selected_models/
+*.joblib
+*.pt
+*.pth
+/results/runs/full_fast_1792678539_edaf59/
+/results/runs/quick_1792677427_63875b/
+/results/runs/nested_pilot_20261022_subject101/
+/results/runs/nested_rf_policy_fullgrid_20261022/subject_*_results.json
+/results/runs/quick_1792671218_26a836/
+/report_assets/report_assets_bundle.zip
+/tmp/
+
+# LaTeX build intermediates (source PDFs and final submission PDFs are retained)
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
+*.toc
+*.lof
+*.lot
+*.nav
+*.snm
+*.vrb

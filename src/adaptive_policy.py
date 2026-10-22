@@ -28,7 +28,8 @@ class AdaptiveSensingController:
         u_low: float = 0.35,
         min_dwell_windows: int = 4,
         probe_interval: int = 20,
-        cost_weights: Optional[Dict[str, float]] = None
+        cost_weights: Optional[Dict[str, float]] = None,
+        cost_budget: float = 1.0
     ):
         if sensors is None:
             self.sensors = ["wrist", "chest", "ankle"]
@@ -49,11 +50,15 @@ class AdaptiveSensingController:
             self.cost_weights = cost_weights
 
         self.total_cost_weight = sum(self.cost_weights.values())
+        if not 0 < cost_budget <= 1 or self.cost_weights[anchor_sensor] / self.total_cost_weight > cost_budget:
+            raise ValueError("Cost budget must include the anchor and lie in (0, 1].")
+        self.cost_budget = cost_budget
 
         # Controller state variables
         self.active_mask: Dict[str, int] = {s: 1 if s == anchor_sensor else 0 for s in self.sensors}
         self.last_observed_reliability: Dict[str, float] = {s: 1.0 for s in self.sensors}
         self.windows_since_last_observed: Dict[str, int] = {s: 0 for s in self.sensors}
+        self.reliability_age_decay = 0.98
         self.dwell_counters: Dict[str, int] = {s: 0 for s in self.sensors}
         self.total_switches: int = 0
         self.total_probes: int = 0
@@ -129,9 +134,11 @@ class AdaptiveSensingController:
         # --- Decision Logic ---
         if unreliable_active or high_uncertainty:
             # Need reinforcement: ACTIVATE best candidate inactive sensor
-            if inactive_sensors:
+            affordable = [s for s in inactive_sensors if self.compute_normalized_cost({**next_mask, s: 1}) <= self.cost_budget]
+            if affordable:
                 # Prioritize inactive sensor with highest last-observed reliability
-                candidate = max(inactive_sensors, key=lambda s: self.last_observed_reliability[s])
+                candidate = max(affordable, key=lambda s:
+                    self.last_observed_reliability[s] * self.reliability_age_decay ** self.windows_since_last_observed[s])
                 next_mask[candidate] = 1
                 self.dwell_counters[candidate] = 0
                 self.total_switches += 1
@@ -141,7 +148,7 @@ class AdaptiveSensingController:
             # If an active sensor is completely failed and another sensor is active, deactive failed sensor
             if len(active_sensors) > 1:
                 for bad_s in unreliable_active:
-                    if self.dwell_counters[bad_s] >= self.min_dwell_windows:
+                    if bad_s != self.anchor_sensor and self.dwell_counters[bad_s] >= self.min_dwell_windows:
                         next_mask[bad_s] = 0
                         self.dwell_counters[bad_s] = 0
                         self.total_switches += 1
@@ -149,10 +156,11 @@ class AdaptiveSensingController:
                         reason = f"Deactivated failing sensor {bad_s}"
                         break
 
-        elif probe_target is not None:
+        elif probe_target is not None and self.compute_normalized_cost({**next_mask, probe_target: 1}) <= self.cost_budget:
             # Probe inactive sensor to check for recovery
             next_mask[probe_target] = 1
             self.total_probes += 1
+            self.total_switches += 1
             action = "PROBE"
             reason = f"Probing inactive sensor {probe_target} for health recovery"
 
@@ -173,8 +181,7 @@ class AdaptiveSensingController:
                 reason = f"Deactivated redundant {deact_candidate} to conserve normalized sensing cost"
 
         # Hard invariant: at least one sensor MUST be active
-        if sum(next_mask.values()) == 0:
-            next_mask[self.anchor_sensor] = 1
+        next_mask[self.anchor_sensor] = 1
 
         self.active_mask = next_mask
         meta = {
@@ -183,6 +190,10 @@ class AdaptiveSensingController:
             "next_active_mask": next_mask,
             "fused_uncertainty": float(fused_uncertainty),
             "normalized_cost": self.compute_normalized_cost(next_mask),
+            "aged_inactive_reliability": {
+                s: self.last_observed_reliability[s] * self.reliability_age_decay ** self.windows_since_last_observed[s]
+                for s in self.sensors if not next_mask[s]
+            },
             "total_switches": self.total_switches,
             "total_probes": self.total_probes
         }

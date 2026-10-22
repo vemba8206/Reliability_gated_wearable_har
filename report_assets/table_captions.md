@@ -7,6 +7,6 @@
 - **Table 5 (`table5_faulted_recognition_comparison.csv` / `.tex`)**: Faulted recognition performance and degradation in percentage points.
 - **Table 6 (`table6_reliability_fault_detection.csv` / `.tex`)**: SensorReliabilityEstimator detection AUROC, precision, recall, and false-alarm rate.
 - **Table 7 (`table7_sensing_cost_comparison.csv` / `.tex`)**: Normalized sensing cost proxy and switching statistics.
-- **Table 8 (`table8_model_latency_computation.csv` / `.tex`)**: Training duration and per-window inference latency.
-- **Table 9 (`table9_per_subject_loso_results.csv` / `.tex`)**: Leave-one-subject-out (LOSO) cross-validation results across all evaluation subjects.
+- **Table 8 (`table8_model_latency_computation.csv` / `.tex`)**: Host-side training duration for the final fold; per-model inference latency was not measured.
+- **Table 9 (`table9_per_subject_loso_results.csv` / `.tex`)**: Leave-one-subject-out (LOSO) cross-validation scores with separate clean and moderate-dropout sensing-cost proxies.
 - **Table 10 (`table10_proposed_vs_baselines_summary.csv` / `.tex`)**: Comprehensive synthesis of recognition, resilience, and efficiency metrics.

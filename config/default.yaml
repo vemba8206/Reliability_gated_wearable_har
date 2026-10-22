@@ -14,7 +14,8 @@ dataset:
   citation: 'A. Reiss and D. Stricker, "Introducing a new benchmarked dataset for activity monitoring," in Proceedings of the 16th International Symposium on Wearable Computers, 2012, pp. 108–109.'
   
   # Full evaluation subjects
-  all_subjects: [101, 102, 103, 104, 105, 106, 107, 108, 109]
+  # Official subject109 has no rows in the six selected activities.
+  all_subjects: [101, 102, 103, 104, 105, 106, 107, 108]
   # Quick dev mode subjects
   quick_subjects: [101, 102, 105]
 
@@ -71,13 +72,13 @@ models:
 
 reliability:
   weights:
-    missing_ratio: 0.35
-    flatline: 0.30
-    noise: 0.20
-    clipping: 0.15
+    missing_ratio: 0.30
+    flatline: 0.25
+    noise: 0.25
+    shift: 0.20
   thresholds:
     flatline_var: 1.0e-4
-    noise_diff_var: 50.0
+    noise_diff_var: 2.0
     clipping_accel: 155.0
 
 adaptive_policy:
@@ -88,7 +89,7 @@ adaptive_policy:
   u_low: 0.35
   min_dwell_windows: 4
   probe_interval: 20
-  cost_budget: 1.0
+  cost_budget: 0.667
 
 fault_injection:
   scenarios:
@@ -97,6 +98,7 @@ fault_injection:
     - "noise"
     - "flatline"
     - "drift"
+    - "combined"
   severities:
     mild: 0.25
     moderate: 0.50

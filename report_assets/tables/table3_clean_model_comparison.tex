@@ -5,12 +5,12 @@
 \begin{tabular}{lccccc}
 \hline
 Baseline Architecture & Classifier & Accuracy & Macro-F1 & Normalized Cost C(t) & Inference Latency (ms) \\ \hline
-Wrist Only (Single Anchor) & RF & 0.8776 +/- 0.0000 & 0.8819 +/- 0.0000 & 0.33 & 0.60 \\
-Wrist + Chest (Static Uniform) & RF & 0.9184 +/- 0.0000 & 0.9190 +/- 0.0000 & 0.67 & 1.09 \\
-All Sensors (Uniform Fusion) & RF & 0.7347 +/- 0.0000 & 0.7376 +/- 0.0000 & 1.00 & 1.66 \\
-All Sensors (Reliability-Weighted) & RF & 0.7347 +/- 0.0000 & 0.7376 +/- 0.0000 & 1.00 & 3.36 \\
-Proposed Reliability-Gated Adaptive & RF & 0.7959 +/- 0.0000 & 0.7980 +/- 0.0000 & 0.52 & 2.76 \\
-Proposed Reliability-Gated Adaptive & CNN-LSTM & 0.4694 +/- 0.0000 & 0.3746 +/- 0.0000 & 0.98 & 1.51 \\
+Wrist Only (Single Anchor) & RF & 0.8447 +/- 0.0811 & 0.7850 +/- 0.1233 & 0.33 & 0.13 \\
+Wrist + Chest (Static Uniform) & RF & 0.9168 +/- 0.0530 & 0.9150 +/- 0.0482 & 0.67 & 0.27 \\
+All Sensors (Uniform Fusion) & RF & 0.9160 +/- 0.0524 & 0.8891 +/- 0.0726 & 1.00 & 0.40 \\
+All Sensors (Reliability-Weighted) & RF & 0.9168 +/- 0.0517 & 0.8900 +/- 0.0726 & 1.00 & 0.96 \\
+Proposed Reliability-Gated Adaptive & RF & 0.9012 +/- 0.0478 & 0.8574 +/- 0.0861 & 0.53 & 28.64 \\
+Proposed Reliability-Gated Adaptive & CNN-LSTM & 0.8584 +/- 0.0637 & 0.8155 +/- 0.0698 & 0.53 & 1.68 \\
 \hline
 \end{tabular}
 \end{table}

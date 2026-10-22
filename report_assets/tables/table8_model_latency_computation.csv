@@ -1,8 +1,7 @@
 Model,Parameters / Trees,Training Time (s),Inference Latency (ms)
-Wrist RF,100 Trees,0.24,0.45 ms
-Chest RF,100 Trees,0.14,0.46 ms
-Ankle RF,100 Trees,0.22,0.45 ms
-Wrist CNN-LSTM,~65k params,5.55,1.28 ms
-Chest CNN-LSTM,~65k params,0.34,1.30 ms
-Ankle CNN-LSTM,~65k params,0.35,1.29 ms
-Reliability Estimator,Rule-based Indicators,0.01 s,0.12 ms
+Wrist RF,50,0.90,not measured
+Chest RF,50,0.90,not measured
+Ankle RF,50,0.90,not measured
+Wrist CNN-LSTM,see checkpoint,11.04,not measured
+Chest CNN-LSTM,see checkpoint,11.21,not measured
+Ankle CNN-LSTM,see checkpoint,11.20,not measured

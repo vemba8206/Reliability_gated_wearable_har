@@ -22,13 +22,13 @@ class SensorFaultSimulator:
         severity: float = 0.5
     ) -> Tuple[np.ndarray, Dict[str, Any]]:
         """
-        Complete or partial sensor dropout (zero-output / dead node).
-        severity represents fraction of window zeroed out (up to 1.0 = entire window).
+        Complete or partial sensor dropout (unavailable samples / dead node).
+        severity represents fraction of window marked missing (up to 1.0 = entire window).
         """
         corrupted = np.copy(window)
         time_steps, _ = corrupted.shape
         drop_steps = int(time_steps * np.clip(severity, 0.1, 1.0))
-        corrupted[:drop_steps, :] = 0.0
+        corrupted[:drop_steps, :] = np.nan
 
         meta = {
             "fault_type": "dropout",
@@ -46,7 +46,7 @@ class SensorFaultSimulator:
     ) -> Tuple[np.ndarray, Dict[str, Any]]:
         """
         Simulate packet dropouts / missing communication blocks.
-        Zeros out multiple discrete intervals throughout the window.
+        Marks multiple discrete communication intervals missing.
         """
         corrupted = np.copy(window)
         time_steps, channels = corrupted.shape
@@ -57,7 +57,7 @@ class SensorFaultSimulator:
             block_indices = self.rng.choice(n_blocks, size=drop_count, replace=False)
             for b in block_indices:
                 start = b * block_size
-                corrupted[start:start + block_size, :] = 0.0
+                corrupted[start:start + block_size, :] = np.nan
 
         meta = {
             "fault_type": "intermittent",
@@ -74,7 +74,7 @@ class SensorFaultSimulator:
     ) -> Tuple[np.ndarray, Dict[str, Any]]:
         """
         Additive white Gaussian noise on sensor channels.
-        Noise std scaled by severity * 12.0 m/s^2.
+        Noise std scaled by severity * 12.0 in the supplied array's units.
         """
         corrupted = np.copy(window)
         noise_std = float(severity) * 12.0

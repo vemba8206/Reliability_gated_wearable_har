@@ -25,6 +25,9 @@ def extract_windows_for_subject(
     - Windows do not span across discontinuous recording sessions.
     - Returns structured 3D arrays for wrist, chest, ankle of shape (N, window_size, 6).
     """
+    if df.empty:
+        return ({s: np.empty((0, window_size, 6), dtype=np.float32) for s in ("wrist", "chest", "ankle")},
+                np.empty(0, dtype=np.int64), [])
     subject_id = int(df["subject_id"].iloc[0])
     n_samples = len(df)
 
@@ -43,6 +46,11 @@ def extract_windows_for_subject(
     for start in range(0, n_samples - window_size + 1, stride):
         end = start + window_size
         win_df = df.iloc[start:end]
+
+        # Activity 0 was filtered upstream; never stitch across the resulting
+        # time gap or across a recording interruption.
+        if (win_df["timestamp"].diff().iloc[1:] > 0.05).any():
+            continue
 
         # Check label purity
         activity_counts = win_df["activity_id"].value_counts()

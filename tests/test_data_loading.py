@@ -22,6 +22,8 @@ def test_extract_subject_id():
 
 def test_load_single_subject_and_cols():
     p = Path("data/raw/PAMAP2_Dataset/Protocol/subject101.dat")
+    if not p.exists():
+        pytest.skip("Official PAMAP2 subject101.dat is not installed")
     df = load_single_subject_raw(p)
     assert df.shape[1] == 54
     assert len(df) > 0
@@ -32,6 +34,8 @@ def test_load_single_subject_and_cols():
 
 def test_filter_and_format_activity_selection():
     p = Path("data/raw/PAMAP2_Dataset/Protocol/subject101.dat")
+    if not p.exists():
+        pytest.skip("Official PAMAP2 subject101.dat is not installed")
     raw_df = load_single_subject_raw(p)
     clean_df, stats = filter_and_format_subject_data(raw_df, 101, DEFAULT_ACTIVITIES)
 

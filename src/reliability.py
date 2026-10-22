@@ -106,10 +106,10 @@ class SensorReliabilityEstimator:
     ):
         if weights is None:
             self.weights = {
-                "missing": 0.35,
-                "flatline": 0.30,
-                "noise": 0.20,
-                "clipping": 0.15
+                "missing_ratio": 0.30,
+                "flatline": 0.25,
+                "noise": 0.25,
+                "shift": 0.20
             }
         else:
             self.weights = weights
@@ -149,17 +149,19 @@ class SensorReliabilityEstimator:
         q_flatline = compute_flatline_indicator(window, var_threshold=self.flatline_var_thresh)
         q_noise = compute_high_frequency_noise_indicator(window, diff_var_threshold=self.noise_diff_var_thresh)
         q_clip = compute_clipping_indicator(window, acc_clip_threshold=self.clipping_acc_thresh)
+        q_shift = compute_distribution_shift_indicator(window, self.baseline_mean, self.baseline_std)
 
         # Weighted penalty
         penalty = (
-            self.weights.get("missing", 0.35) * q_missing +
+            self.weights.get("missing_ratio", self.weights.get("missing", 0.0)) * q_missing +
             self.weights.get("flatline", 0.30) * q_flatline +
             self.weights.get("noise", 0.20) * q_noise +
-            self.weights.get("clipping", 0.15) * q_clip
+            self.weights.get("clipping", 0.0) * q_clip +
+            self.weights.get("shift", 0.0) * q_shift
         )
 
         # Severe fault triggers immediate degradation
-        if q_flatline >= 0.8 or q_missing >= 0.5:
+        if q_flatline >= 0.8 or q_missing >= 0.5 or q_shift >= 0.8:
             penalty = max(penalty, 0.85)
 
         reliability = float(np.clip(1.0 - penalty, 0.0, 1.0))
@@ -173,6 +175,7 @@ class SensorReliabilityEstimator:
                 "flatline": q_flatline,
                 "noise": q_noise,
                 "clipping": q_clip,
+                "shift": q_shift,
                 "penalty": float(penalty)
             }
         }

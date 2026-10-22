@@ -30,7 +30,7 @@ def plot_activity_distribution(
     activity_counts: Dict[str, int],
     save_path: Path
 ) -> None:
-    """Figure 1: Activity-class distribution across protocol dataset."""
+    """Figure 1: Selected activity sample counts across protocol files."""
     save_path.parent.mkdir(parents=True, exist_ok=True)
     fig, ax = plt.subplots(figsize=(6, 3.5))
 
@@ -39,8 +39,8 @@ def plot_activity_distribution(
     colors = ["#1f77b4", "#aec7e8", "#ff7f0e", "#ffbb78", "#2ca02c", "#98df8a"]
 
     bars = ax.bar(names, counts, color=colors[:len(names)], edgecolor="black", linewidth=0.8)
-    ax.set_ylabel("Number of Usable Windows")
-    ax.set_title("Dataset Activity Class Distribution")
+    ax.set_ylabel("Selected protocol samples")
+    ax.set_title("Selected Activity Sample Distribution")
     ax.grid(axis="y", linestyle="--", alpha=0.5)
 
     for bar in bars:
@@ -132,7 +132,7 @@ def plot_cost_vs_macro_f1(
     baseline_results: Dict[str, Dict[str, float]],
     save_path: Path
 ) -> None:
-    """Figure 8: Normalized Sensing Cost Proxy vs. Faulted Macro-F1 trade-off."""
+    """Normalized sensing cost proxy versus clean macro-F1 trade-off."""
     save_path.parent.mkdir(parents=True, exist_ok=True)
     fig, ax = plt.subplots(figsize=(5.5, 4.0))
 
@@ -148,14 +148,15 @@ def plot_cost_vs_macro_f1(
         s = 180 if idx == len(baseline_results) - 1 else 100
 
         ax.scatter(cost, f1, s=s, marker=m, color=c, label=label, edgecolor="black", linewidth=1.0)
-        ax.annotate(label, xy=(cost, f1), xytext=(5, 4), textcoords="offset points", fontsize=8)
+        # A legend keeps nearby methods legible at the same cost level.
 
     ax.set_xlabel("Normalized Sensing Cost Proxy C(t)")
-    ax.set_ylabel("Macro-F1 Score (Under Fault)")
-    ax.set_title("Pareto Trade-off: Sensing Efficiency vs. Accuracy")
+    ax.set_ylabel("Clean Macro-F1 Score")
+    ax.set_title("Clean recognition versus sensing cost")
     ax.set_xlim([0.2, 1.1])
     ax.set_ylim([0.0, 1.05])
     ax.grid(True, linestyle="--", alpha=0.5)
+    ax.legend(loc="lower right", fontsize=7, frameon=True)
 
     plt.tight_layout()
     fig.savefig(save_path)

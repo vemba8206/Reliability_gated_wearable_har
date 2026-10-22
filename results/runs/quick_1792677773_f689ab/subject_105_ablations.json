@@ -1,0 +1,152 @@
+{
+  "clean": {
+    "standard": {
+      "macro_f1": 0.7539292362894917,
+      "accuracy": 0.7776845637583892,
+      "mean_normalized_cost": 0.644854586129754,
+      "total_switches": 49,
+      "total_probes": 15,
+      "windows": 1192
+    },
+    "without_reliability_gate": {
+      "macro_f1": 0.7539292362894917,
+      "accuracy": 0.7776845637583892,
+      "mean_normalized_cost": 0.644854586129754,
+      "total_switches": 49,
+      "total_probes": 15,
+      "windows": 1192
+    },
+    "without_uncertainty_control": {
+      "macro_f1": 0.7618349579737119,
+      "accuracy": 0.8003355704697986,
+      "mean_normalized_cost": 0.6610738255033557,
+      "total_switches": 1,
+      "total_probes": 1,
+      "windows": 1192
+    },
+    "without_budget_constraint": {
+      "macro_f1": 0.8395864500210225,
+      "accuracy": 0.8548657718120806,
+      "mean_normalized_cost": 0.9175055928411632,
+      "total_switches": 58,
+      "total_probes": 5,
+      "windows": 1192
+    },
+    "without_weighted_fusion": {
+      "macro_f1": 0.7613543974557806,
+      "accuracy": 0.785234899328859,
+      "mean_normalized_cost": 0.6445749440715884,
+      "total_switches": 49,
+      "total_probes": 15,
+      "windows": 1192
+    },
+    "without_dwell": {
+      "macro_f1": 0.7536602384721302,
+      "accuracy": 0.7776845637583892,
+      "mean_normalized_cost": 0.6437360178970917,
+      "total_switches": 51,
+      "total_probes": 17,
+      "windows": 1192
+    }
+  },
+  "moderate_dropout": {
+    "standard": {
+      "macro_f1": 0.7422602694531181,
+      "accuracy": 0.7751677852348994,
+      "mean_normalized_cost": 0.6663870246085012,
+      "total_switches": 1,
+      "total_probes": 0,
+      "windows": 1192
+    },
+    "without_reliability_gate": {
+      "macro_f1": 0.7044525667790761,
+      "accuracy": 0.7281879194630873,
+      "mean_normalized_cost": 0.6191275167785235,
+      "total_switches": 79,
+      "total_probes": 21,
+      "windows": 1192
+    },
+    "without_uncertainty_control": {
+      "macro_f1": 0.7422602694531181,
+      "accuracy": 0.7751677852348994,
+      "mean_normalized_cost": 0.6663870246085012,
+      "total_switches": 1,
+      "total_probes": 0,
+      "windows": 1192
+    },
+    "without_budget_constraint": {
+      "macro_f1": 0.8502579778463198,
+      "accuracy": 0.8615771812080537,
+      "mean_normalized_cost": 0.9991610738255033,
+      "total_switches": 2,
+      "total_probes": 0,
+      "windows": 1192
+    },
+    "without_weighted_fusion": {
+      "macro_f1": 0.7869066852095316,
+      "accuracy": 0.8112416107382551,
+      "mean_normalized_cost": 0.6663870246085012,
+      "total_switches": 1,
+      "total_probes": 0,
+      "windows": 1192
+    },
+    "without_dwell": {
+      "macro_f1": 0.7422602694531181,
+      "accuracy": 0.7751677852348994,
+      "mean_normalized_cost": 0.6663870246085012,
+      "total_switches": 1,
+      "total_probes": 0,
+      "windows": 1192
+    }
+  },
+  "moderate_noise": {
+    "standard": {
+      "macro_f1": 0.5459633923317054,
+      "accuracy": 0.6375838926174496,
+      "mean_normalized_cost": 0.6428970917225951,
+      "total_switches": 16,
+      "total_probes": 8,
+      "windows": 1192
+    },
+    "without_reliability_gate": {
+      "macro_f1": 0.5459633923317054,
+      "accuracy": 0.6375838926174496,
+      "mean_normalized_cost": 0.6428970917225951,
+      "total_switches": 16,
+      "total_probes": 8,
+      "windows": 1192
+    },
+    "without_uncertainty_control": {
+      "macro_f1": 0.5459633923317054,
+      "accuracy": 0.6375838926174496,
+      "mean_normalized_cost": 0.6610738255033557,
+      "total_switches": 1,
+      "total_probes": 1,
+      "windows": 1192
+    },
+    "without_budget_constraint": {
+      "macro_f1": 0.7930583656811341,
+      "accuracy": 0.8120805369127517,
+      "mean_normalized_cost": 0.899049217002237,
+      "total_switches": 34,
+      "total_probes": 17,
+      "windows": 1192
+    },
+    "without_weighted_fusion": {
+      "macro_f1": 0.4547351007847307,
+      "accuracy": 0.5050335570469798,
+      "mean_normalized_cost": 0.6375838926174496,
+      "total_switches": 20,
+      "total_probes": 10,
+      "windows": 1192
+    },
+    "without_dwell": {
+      "macro_f1": 0.5459633923317054,
+      "accuracy": 0.6375838926174496,
+      "mean_normalized_cost": 0.6428970917225951,
+      "total_switches": 16,
+      "total_probes": 8,
+      "windows": 1192
+    }
+  }
+}

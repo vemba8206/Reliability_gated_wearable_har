@@ -5,6 +5,7 @@ import sys
 import time
 import uuid
 import json
+import hashlib
 import logging
 import argparse
 from pathlib import Path
@@ -12,7 +13,7 @@ from typing import Dict, List, Any, Optional
 import numpy as np
 import yaml
 
-from src.data_download import acquire_dataset
+from src.data_download import acquire_dataset, find_existing_subject_files
 from src.data_loader import load_all_subjects, DEFAULT_ACTIVITIES
 from src.preprocessing import impute_short_gaps, SubjectAwareScaler
 from src.windowing import segment_all_subjects
@@ -69,11 +70,27 @@ def run_experiment_pipeline(
 
     # 1. Dataset Acquisition
     raw_dir = cfg["dataset"]["raw_dir"]
-    acquired, msg = acquire_dataset(raw_dir=raw_dir)
+    if (Path(raw_dir) / "SYNTHETIC_DATA_DO_NOT_USE_FOR_RESEARCH").exists():
+        raise RuntimeError("Synthetic smoke-test data cannot be used for research experiments.")
+    requested_subjects = cfg["dataset"].get("quick_subjects", [101, 102, 105]) if mode in ("quick", "three_subject_loso") else cfg["dataset"].get("all_subjects", list(range(101, 110)))
+    present_subjects = {int(p.stem.replace("subject", "")) for p in find_existing_subject_files(raw_dir)}
+    if set(requested_subjects) <= present_subjects:
+        acquired, msg = True, f"Requested subject files already present in {raw_dir}."
+    else:
+        acquired, msg = acquire_dataset(raw_dir=raw_dir)
+    if not acquired:
+        raise FileNotFoundError(msg)
+    dataset_manifest = {}
+    for subject_file in find_existing_subject_files(raw_dir):
+        digest = hashlib.sha256()
+        with subject_file.open("rb") as stream:
+            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                digest.update(chunk)
+        dataset_manifest[subject_file.name] = {"sha256": digest.hexdigest(), "bytes": subject_file.stat().st_size}
     logger.info(f"Dataset status: {msg}")
 
     # 2. Select subjects and activities
-    if mode == "quick":
+    if mode in ("quick", "three_subject_loso"):
         subjects = cfg["dataset"].get("quick_subjects", [101, 102, 105])
     else:
         subjects = cfg["dataset"].get("all_subjects", [101, 102, 103, 104, 105, 106, 107, 108, 109])
@@ -89,6 +106,9 @@ def run_experiment_pipeline(
         selected_subjects=subjects,
         selected_activities=activities
     )
+    missing_subjects = set(subjects) - set(raw_by_sub)
+    if missing_subjects:
+        raise FileNotFoundError(f"Missing requested official PAMAP2 subject files: {sorted(missing_subjects)}")
 
     # 3. Preprocessing (Short-gap Imputation per subject)
     clean_by_sub = {}
@@ -114,6 +134,9 @@ def run_experiment_pipeline(
     )
 
     total_windows = sum(len(y) for y in labels_by_sub.values())
+    empty_subjects = [subject for subject in subjects if len(labels_by_sub[subject]) == 0]
+    if empty_subjects:
+        raise ValueError(f"Selected subjects have no windows for configured activities: {empty_subjects}")
     logger.info(f"Windowing complete: {total_windows} total windows across {len(subjects)} subjects.")
 
     # 5. Outer Evaluation Protocol (LOSO Cross-Validation)
@@ -205,6 +228,14 @@ def run_experiment_pipeline(
             cnn.fit(X_train[sensor], y_train, X_val[sensor], y_val)
             cnn_models[sensor] = cnn
 
+        fold_model_dir = run_dir / f"subject_{test_sub}_models"
+        fold_model_dir.mkdir(parents=True, exist_ok=True)
+        for sensor in ["wrist", "chest", "ankle"]:
+            rf_models[sensor].save(fold_model_dir / f"{sensor}_rf.joblib")
+            cnn_models[sensor].save(fold_model_dir / f"{sensor}_cnn.pt")
+        with (fold_model_dir / "scaler.json").open("w", encoding="utf-8") as stream:
+            json.dump(scaler.to_dict(), stream, indent=2)
+
         # Calibrate Sensor Reliability Estimators on training data
         estimators = {}
         for sensor in ["wrist", "chest", "ankle"]:
@@ -226,7 +257,9 @@ def run_experiment_pipeline(
             u_high=cfg["adaptive_policy"]["u_high"],
             u_low=cfg["adaptive_policy"]["u_low"],
             min_dwell_windows=cfg["adaptive_policy"]["min_dwell_windows"],
-            probe_interval=cfg["adaptive_policy"]["probe_interval"]
+            probe_interval=cfg["adaptive_policy"]["probe_interval"],
+            cost_budget=cfg["adaptive_policy"]["cost_budget"],
+            cost_weights={s: cfg["dataset"]["sensors"][s]["cost_weight"] for s in ["wrist", "chest", "ankle"]}
         )
 
         # --- Evaluate Clean Condition across Baselines ---
@@ -243,6 +276,13 @@ def run_experiment_pipeline(
             "all_reliability": run_baseline_all_reliability(X_test, y_test, cnn_models, estimators, canonical_classes, activities),
             "proposed_adaptive": run_proposed_adaptive(X_test, y_test, cnn_models, estimators, controller, canonical_classes, activities)
         }
+        with (run_dir / f"subject_{test_sub}_clean_adaptive_log.json").open("w", encoding="utf-8") as stream:
+            json.dump({"subject": test_sub, "y_true": y_test.tolist(),
+                       "predictions": clean_res["proposed_adaptive"]["predictions"],
+                       "masks": clean_res["proposed_adaptive"]["masks"],
+                       "actions": clean_res["proposed_adaptive"]["actions"],
+                       "reliabilities": clean_res["proposed_adaptive"]["reliabilities"],
+                       "uncertainties": clean_res["proposed_adaptive"]["uncertainties"]}, stream)
 
         # --- Evaluate Faulted Conditions ---
         # Inject controlled fault onto target sensor (wrist anchor or chest)
@@ -274,12 +314,14 @@ def run_experiment_pipeline(
                 # Re-run baselines on corrupted test sequence
                 b_all_uniform = run_baseline_all_uniform(corrupted_test_w, y_test, rf_models, canonical_classes, activities)
                 b_all_rel = run_baseline_all_reliability(corrupted_test_w, y_test, rf_models, estimators, canonical_classes, activities)
-                b_adaptive = run_proposed_adaptive(corrupted_test_w, y_test, rf_models, estimators, controller, canonical_classes, activities)
+                b_adaptive = run_proposed_adaptive(corrupted_test_w, y_test, rf_models, estimators, controller, canonical_classes, activities, offline_cache=True)
 
                 # Reliability fault-detection performance
+                clean_rels = np.array(clean_res["all_reliability"]["reliabilities"][target_sensor])
+                fault_rels = np.array(b_all_rel["reliabilities"][target_sensor])
                 rel_detect = compute_reliability_detection_metrics(
-                    injected_labels_arr,
-                    np.array(b_all_rel["reliabilities"][target_sensor])
+                    np.concatenate([np.zeros(len(clean_rels), dtype=int), injected_labels_arr]),
+                    np.concatenate([clean_rels, fault_rels])
                 )
 
                 fault_results[scenario][sev_name] = {
@@ -291,6 +333,11 @@ def run_experiment_pipeline(
                 }
 
                 if scenario == "dropout" and sev_name == "moderate":
+                    with (run_dir / f"subject_{test_sub}_dropout_moderate_adaptive_log.json").open("w", encoding="utf-8") as stream:
+                        json.dump({"subject": test_sub, "y_true": y_test.tolist(),
+                                   "predictions": b_adaptive["predictions"], "masks": b_adaptive["masks"],
+                                   "actions": b_adaptive["actions"], "reliabilities": b_adaptive["reliabilities"],
+                                   "uncertainties": b_adaptive["uncertainties"]}, stream)
                     last_adaptive_res = b_adaptive
                     last_all_rel_res = b_all_rel
 
@@ -352,7 +399,7 @@ def run_experiment_pipeline(
 
     # Faulted comparison rows
     faulted_table_rows = []
-    scenarios = ["dropout", "intermittent", "noise", "flatline", "drift"]
+    scenarios = fault_scenarios
     for sc in scenarios:
         unif_f1 = np.mean([f["fault_results"][sc]["moderate"]["uniform_f1"] for f in fold_results])
         rel_f1 = np.mean([f["fault_results"][sc]["moderate"]["reliability_f1"] for f in fold_results])
@@ -382,18 +429,18 @@ def run_experiment_pipeline(
             "Mean Normalized Cost": f"{np.mean(costs):.2f}",
             "Active Sensor Ratio": f"{np.mean(ratios):.2f}",
             "Switching Count": f"{int(np.mean(switches))}",
-            "Power Reduction Proxy": f"{(1.0 - np.mean(costs)) * 100.0:.1f}%"
+            "Cost Reduction Proxy": f"{(1.0 - np.mean(costs)) * 100.0:.1f}%"
         })
 
     # Latency comparison table rows
     latency_table_rows = [
-        {"Model": "Wrist RF", "Parameters / Trees": "100 Trees", "Training Time (s)": f"{last_rf_models['wrist'].train_duration_sec:.2f}", "Inference Latency (ms)": "0.45 ms"},
-        {"Model": "Chest RF", "Parameters / Trees": "100 Trees", "Training Time (s)": f"{last_rf_models['chest'].train_duration_sec:.2f}", "Inference Latency (ms)": "0.46 ms"},
-        {"Model": "Ankle RF", "Parameters / Trees": "100 Trees", "Training Time (s)": f"{last_rf_models['ankle'].train_duration_sec:.2f}", "Inference Latency (ms)": "0.45 ms"},
-        {"Model": "Wrist CNN-LSTM", "Parameters / Trees": "~65k params", "Training Time (s)": f"{last_cnn_models['wrist'].train_duration_sec:.2f}", "Inference Latency (ms)": "1.28 ms"},
-        {"Model": "Chest CNN-LSTM", "Parameters / Trees": "~65k params", "Training Time (s)": f"{last_cnn_models['chest'].train_duration_sec:.2f}", "Inference Latency (ms)": "1.30 ms"},
-        {"Model": "Ankle CNN-LSTM", "Parameters / Trees": "~65k params", "Training Time (s)": f"{last_cnn_models['ankle'].train_duration_sec:.2f}", "Inference Latency (ms)": "1.29 ms"},
-        {"Model": "Reliability Estimator", "Parameters / Trees": "Rule-based Indicators", "Training Time (s)": "0.01 s", "Inference Latency (ms)": "0.12 ms"}
+        {"Model": f"{sensor.title()} RF", "Parameters / Trees": str(last_rf_models[sensor].clf.n_estimators),
+         "Training Time (s)": f"{last_rf_models[sensor].train_duration_sec:.2f}", "Inference Latency (ms)": "not measured"}
+        for sensor in ["wrist", "chest", "ankle"]
+    ] + [
+        {"Model": f"{sensor.title()} CNN-LSTM", "Parameters / Trees": "see checkpoint",
+         "Training Time (s)": f"{last_cnn_models[sensor].train_duration_sec:.2f}", "Inference Latency (ms)": "not measured"}
+        for sensor in ["wrist", "chest", "ankle"]
     ]
 
     # Per-subject results table rows
@@ -402,31 +449,38 @@ def run_experiment_pipeline(
         sub_id = f["test_subject"]
         sub_f1_clean = f["clean_results"]["proposed_adaptive"]["metrics"]["macro_f1"]
         sub_f1_fault = f["fault_results"]["dropout"]["moderate"]["adaptive_f1"]
-        sub_cost = f["fault_results"]["dropout"]["moderate"]["adaptive_cost"]
+        sub_clean_cost = f["clean_results"]["proposed_adaptive"]["cost"]["mean_normalized_cost"]
+        sub_fault_cost = f["fault_results"]["dropout"]["moderate"]["adaptive_cost"]
         per_subject_rows.append({
             "Subject ID": f"Subject {sub_id}",
             "Clean Macro-F1": f"{sub_f1_clean:.4f}",
             "Faulted Macro-F1 (Dropout)": f"{sub_f1_fault:.4f}",
-            "Normalized Cost": f"{sub_cost:.2f}"
+            "Clean Cost Proxy": f"{sub_clean_cost:.2f}",
+            "Moderate-Dropout Cost Proxy": f"{sub_fault_cost:.2f}"
         })
 
     # Overall synthesis
     best_clean_val = float(np.mean([f["clean_results"]["proposed_adaptive"]["metrics"]["macro_f1"] for f in fold_results]))
     best_faulted_val = float(np.mean([f["fault_results"]["dropout"]["moderate"]["adaptive_f1"] for f in fold_results]))
     avg_proposed_cost = float(np.mean([f["clean_results"]["proposed_adaptive"]["cost"]["mean_normalized_cost"] for f in fold_results]))
+    mean_fault_auroc = float(np.nanmean([
+        f["fault_results"][scenario][severity]["reliability_detection"]["auroc"]
+        for f in fold_results for scenario in fault_scenarios for severity in fault_severities
+    ]))
 
     overall_synthesis_rows = [
-        {"Dimension": "Clean Macro-F1", "All Uniform Baseline": f"{np.mean([f['clean_results']['all_uniform']['metrics']['macro_f1'] for f in fold_results]):.4f}", "Proposed Adaptive": f"{best_clean_val:.4f}", "Advantage": "Comparable (+0.01)"},
-        {"Dimension": "Faulted Macro-F1 (50% Dropout)", "All Uniform Baseline": f"{np.mean([f['fault_results']['dropout']['moderate']['uniform_f1'] for f in fold_results]):.4f}", "Proposed Adaptive": f"{best_faulted_val:.4f}", "Advantage": f"+{(best_faulted_val - np.mean([f['fault_results']['dropout']['moderate']['uniform_f1'] for f in fold_results])) * 100.0:.1f} pp"},
+        {"Dimension": "Clean Macro-F1", "All Uniform Baseline": f"{np.mean([f['clean_results']['all_uniform']['metrics']['macro_f1'] for f in fold_results]):.4f}", "Proposed Adaptive": f"{best_clean_val:.4f}", "Advantage": f"{(best_clean_val - np.mean([f['clean_results']['all_uniform']['metrics']['macro_f1'] for f in fold_results])) * 100:.1f} pp"},
+        {"Dimension": "Faulted Macro-F1 (50% Dropout)", "All Uniform Baseline": f"{np.mean([f['fault_results']['dropout']['moderate']['uniform_f1'] for f in fold_results]):.4f}", "Proposed Adaptive": f"{best_faulted_val:.4f}", "Advantage": f"{(best_faulted_val - np.mean([f['fault_results']['dropout']['moderate']['uniform_f1'] for f in fold_results])) * 100.0:.1f} pp"},
         {"Dimension": "Normalized Sensing Cost", "All Uniform Baseline": "1.00", "Proposed Adaptive": f"{avg_proposed_cost:.2f}", "Advantage": f"{(1.0 - avg_proposed_cost) * 100.0:.1f}% reduction"},
-        {"Dimension": "Fault Detection AUROC", "All Uniform Baseline": "N/A", "Proposed Adaptive": "0.9620", "Advantage": "Observable isolation"},
-        {"Dimension": "Chattering Resistance", "All Uniform Baseline": "0 switches", "Proposed Adaptive": "< 0.05 switches/win", "Advantage": "High dwell stability"}
+        {"Dimension": "Fault Detection AUROC", "All Uniform Baseline": "N/A", "Proposed Adaptive": f"{mean_fault_auroc:.4f}", "Advantage": "across injected faults"},
+        {"Dimension": "Switches per test window", "All Uniform Baseline": "0", "Proposed Adaptive": f"{np.mean([f['clean_results']['proposed_adaptive']['cost']['total_switches'] for f in fold_results]) / max(1, np.mean([len(labels_by_sub[f['test_subject']]) for f in fold_results])):.4f}", "Advantage": "observed mask toggles"}
     ]
 
     experiment_summary = {
         "run_id": run_id,
         "mode": mode,
         "subjects": subjects,
+        "dataset_manifest": dataset_manifest,
         "duration_sec": time.time() - t_start,
         "best_clean_f1": best_clean_val,
         "best_faulted_f1": best_faulted_val,
@@ -437,13 +491,8 @@ def run_experiment_pipeline(
         "latency_comparison": latency_table_rows,
         "per_subject_results": per_subject_rows,
         "overall_synthesis": overall_synthesis_rows,
-        "reliability_detection": {
-            "auroc": 0.9620,
-            "precision": 0.9310,
-            "recall": 0.9450,
-            "f1": 0.9379,
-            "false_alarm_rate": 0.0380
-        }
+        "reliability_detection": {scenario: {severity: [f["fault_results"][scenario][severity]["reliability_detection"] for f in fold_results]
+            for severity in fault_severities} for scenario in fault_scenarios}
     }
 
     # 7. Generate Figures and Tables
@@ -474,22 +523,21 @@ def run_experiment_pipeline(
     # Figure 5 & 6: Macro-F1 vs Severity
     sev_levels = [0.0, 0.25, 0.50, 0.85]
     f0 = fold_results[0]
-    rf_sev_scores = {
-        "wrist_only": [f0["clean_results"]["wrist_only"]["metrics"]["macro_f1"], 0.72, 0.65, 0.54],
-        "all_uniform": [f0["clean_results"]["all_uniform"]["metrics"]["macro_f1"], 0.81, 0.70, 0.52],
-        "all_reliability": [f0["clean_results"]["all_reliability"]["metrics"]["macro_f1"], 0.91, 0.89, 0.85],
-        "proposed_adaptive": [f0["clean_results"]["proposed_adaptive"]["metrics"]["macro_f1"], 0.90, 0.88, 0.84]
-    }
+    rf_sev_scores = {key: [float(np.mean([f["clean_results"][clean_key]["metrics"]["macro_f1"] for f in fold_results]))] +
+        [float(np.mean([f["fault_results"]["dropout"][severity][fault_key] for f in fold_results]))
+         for severity in fault_severities]
+        for key, clean_key, fault_key in [
+            ("all_uniform", "all_uniform", "uniform_f1"),
+            ("all_reliability", "all_reliability", "reliability_f1"),
+            ("proposed_adaptive", "proposed_adaptive", "adaptive_f1")]}
     plot_macro_f1_vs_severity(sev_levels, rf_sev_scores, {}, exporter.figures_dir / "fig5_macro_f1_vs_severity.png")
 
     # Figure 7: Cost vs Macro-F1
-    tradeoff_data = {
-        "Wrist Only": {"cost": 0.33, "macro_f1": 0.75, "label": "Wrist Only"},
-        "Wrist + Chest": {"cost": 0.67, "macro_f1": 0.82, "label": "Wrist + Chest"},
-        "All Uniform": {"cost": 1.00, "macro_f1": 0.71, "label": "All Uniform"},
-        "All Rel-Weighted": {"cost": 1.00, "macro_f1": 0.89, "label": "All Rel-Weighted"},
-        "Proposed Adaptive": {"cost": avg_proposed_cost, "macro_f1": best_faulted_val, "label": "Proposed Adaptive"}
-    }
+    tradeoff_data = {name: {"cost": float(np.mean([f["clean_results"][key]["cost"]["mean_normalized_cost"] for f in fold_results])),
+        "macro_f1": float(np.mean([f["clean_results"][key]["metrics"]["macro_f1"] for f in fold_results])), "label": name}
+        for key, name in [("wrist_only", "Wrist Only"), ("wrist_chest", "Wrist + Chest"),
+            ("all_uniform", "All Uniform"), ("all_reliability", "All Rel-Weighted"),
+            ("proposed_adaptive", "Proposed Adaptive")]}
     plot_cost_vs_macro_f1(tradeoff_data, exporter.figures_dir / "fig7_cost_vs_macro_f1.png")
 
     # Figure 9 & 10: Timeline
@@ -531,7 +579,7 @@ def run_experiment_pipeline(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run Reliability-Gated HAR Experiments")
-    parser.add_argument("--mode", type=str, choices=["quick", "full"], default="quick", help="Execution mode")
+    parser.add_argument("--mode", type=str, choices=["quick", "three_subject_loso", "full_fast", "full"], default="quick", help="Execution mode")
     parser.add_argument("--config", type=str, default="config/default.yaml", help="Path to config file")
     args = parser.parse_args()
 

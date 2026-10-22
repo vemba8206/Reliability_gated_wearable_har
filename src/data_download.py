@@ -6,8 +6,6 @@ import zipfile
 import logging
 from pathlib import Path
 from typing import Optional, List, Tuple
-import requests
-from tqdm import tqdm
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
@@ -51,6 +49,8 @@ def extract_archive(archive_path: Path, extract_to: Path) -> None:
 
 def download_file(url: str, dest_path: Path, chunk_size: int = 1024 * 1024) -> bool:
     """Download a file with streaming progress bar."""
+    import requests
+    from tqdm import tqdm
     dest_path.parent.mkdir(parents=True, exist_ok=True)
     temp_path = dest_path.with_suffix(".tmp")
     headers = {"User-Agent": "Reliability-Gated-HAR-Research/1.0"}
@@ -95,6 +95,8 @@ def create_synthetic_pamap2_subset(raw_dir: str = "data/raw", subjects: Optional
 
     target_dir = Path(raw_dir) / "PAMAP2_Dataset" / "Protocol"
     target_dir.mkdir(parents=True, exist_ok=True)
+    (Path(raw_dir) / "SYNTHETIC_DATA_DO_NOT_USE_FOR_RESEARCH").write_text(
+        "Synthetic smoke-test data; remove this directory and acquire official PAMAP2 for research.", encoding="utf-8")
     created_files = []
 
     logger.warning("Generating synthetic PAMAP2 protocol subset for test/offline verification...")
@@ -167,7 +169,7 @@ def create_synthetic_pamap2_subset(raw_dir: str = "data/raw", subjects: Optional
 def acquire_dataset(
     raw_dir: str = "data/raw",
     url: str = OFFICIAL_URL,
-    allow_synthetic_fallback: bool = True
+    allow_synthetic_fallback: bool = False
 ) -> Tuple[bool, str]:
     """
     Main acquisition function:
@@ -175,10 +177,12 @@ def acquire_dataset(
     2. Downloads archive if missing.
     3. Extracts nested archives.
     4. Validates contents.
-    5. Falls back to synthetic dataset if offline / download fails.
+    5. Fails visibly if official data cannot be acquired.
     """
     dest_dir = Path(raw_dir)
     dest_dir.mkdir(parents=True, exist_ok=True)
+    if (dest_dir / "SYNTHETIC_DATA_DO_NOT_USE_FOR_RESEARCH").exists():
+        raise RuntimeError("Synthetic smoke-test data detected in the research data directory.")
 
     if is_dataset_present(raw_dir):
         files = find_existing_subject_files(raw_dir)
@@ -205,8 +209,7 @@ def acquire_dataset(
 
     # Fallback if download failed or extraction was incomplete
     if allow_synthetic_fallback:
-        create_synthetic_pamap2_subset(raw_dir)
-        return True, "Dataset download was unavailable; generated calibrated synthetic PAMAP2 protocol files for offline verification."
+        raise ValueError("Synthetic fallback is forbidden for research experiments; use --synthetic only for isolated smoke tests.")
 
     return False, "Failed to download dataset. Please place 'subject101.dat'..'subject109.dat' in data/raw/."
 

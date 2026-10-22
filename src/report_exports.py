@@ -5,7 +5,7 @@ import json
 import zipfile
 import logging
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Tuple
 import pandas as pd
 import numpy as np
 
@@ -103,7 +103,7 @@ class ReportArtifactExporter:
             ],
             "Specification": [
                 "PAMAP2 Physical Activity Monitoring (DOI: 10.24432/C5NW2H)",
-                f"{len(experiment_results.get('subjects', []))} Participants (LOSO Cross-Validation)",
+                f"{len(experiment_results['subjects'])} participants; {experiment_results['mode']} evaluation",
                 "100 Hz", "2.56 s (256 samples)", "1.28 s (128 samples, 50% overlap)",
                 "0.80 (transitional windows discarded)", "Wrist, Chest, Ankle",
                 "6 channels (3D Accel +-16g, 3D Gyroscope)"
@@ -128,7 +128,7 @@ class ReportArtifactExporter:
                 "Conv1D Feature Extractor", "LSTM Sequence Recurrent Layer", "Dropout Probability", "Optimizer & LR"
             ],
             "Value": [
-                "100", "15", "Balanced",
+                "50" if experiment_results["mode"] in ("quick", "three_subject_loso", "full_fast") else "100", "15", "Balanced",
                 "Conv1(32, k=7) -> Conv2(64, k=5)", "64 Hidden Units (Single Layer)", "0.30", "Adam (lr=0.001, early stopping)"
             ]
         }
@@ -154,17 +154,17 @@ class ReportArtifactExporter:
 
         # Table 4: Fault Scenarios & Severity Definitions
         t4_data = {
-            "Fault Scenario": ["Dropout", "Intermittent Missing", "Gaussian Noise", "Stuck-at / Flatline", "Bias Drift"],
+            "Fault Scenario": ["Dropout", "Intermittent Missing", "Gaussian Noise", "Stuck-at / Flatline", "Bias Drift", "Combined"],
             "Physical Phenomenon": [
-                "Complete loss of sensor telemetry (zero signal)",
+                "Unavailable sensor samples (NaN marker)",
                 "Transient communication packet loss",
                 "Electromagnetic interference / noisy analog stage",
                 "Sensor hardware lockup / frozen ADC",
-                "Thermal calibration drift / DC bias shift"
+                "Thermal calibration drift / DC bias shift", "Noise and intermittent loss"
             ],
-            "Mild (25%)": ["25% window drop", "25% blocks dropped", "std=3.0 m/s^2", "25% samples stuck", "+5.0 m/s^2 drift"],
-            "Moderate (50%)": ["50% window drop", "50% blocks dropped", "std=6.0 m/s^2", "50% samples stuck", "+10.0 m/s^2 drift"],
-            "Severe (85%)": ["85% window drop", "85% blocks dropped", "std=10.2 m/s^2", "85% samples stuck", "+17.0 m/s^2 drift"]
+            "Mild (25%)": ["25% window drop", "25% blocks dropped", "noise SD=3 scaled units", "25% samples stuck", "+5 scaled-unit drift", "noise + missing"],
+            "Moderate (50%)": ["50% window drop", "50% blocks dropped", "noise SD=6 scaled units", "50% samples stuck", "+10 scaled-unit drift", "noise + missing"],
+            "Severe (85%)": ["85% window drop", "85% blocks dropped", "noise SD=10.2 scaled units", "85% samples stuck", "+17 scaled-unit drift", "noise + missing"]
         }
         p1, p2 = self.export_table(
             pd.DataFrame(t4_data),
@@ -187,15 +187,18 @@ class ReportArtifactExporter:
             exported.extend([p1, p2])
 
         # Table 6: Sensor Reliability & Fault Detection Metrics
-        rel_metrics = experiment_results.get("reliability_detection", {})
+        rel_runs = [m for scenario in experiment_results["reliability_detection"].values()
+                    for severity in scenario.values() for m in severity]
+        rel_metrics = {key: float(np.mean([m[key] for m in rel_runs if m[key] is not None]))
+                       for key in ["auroc", "precision", "recall", "f1", "false_alarm_rate"]}
         t6_data = {
             "Metric": ["AUROC", "Detection Precision", "Detection Recall", "Detection F1", "False-Alarm Rate (FAR)"],
             "Observed Value": [
-                f"{rel_metrics.get('auroc', 0.95):.4f}",
-                f"{rel_metrics.get('precision', 0.92):.4f}",
-                f"{rel_metrics.get('recall', 0.94):.4f}",
-                f"{rel_metrics.get('f1', 0.93):.4f}",
-                f"{rel_metrics.get('false_alarm_rate', 0.04):.4f}"
+                f"{rel_metrics['auroc']:.4f}",
+                f"{rel_metrics['precision']:.4f}",
+                f"{rel_metrics['recall']:.4f}",
+                f"{rel_metrics['f1']:.4f}",
+                f"{rel_metrics['false_alarm_rate']:.4f}"
             ]
         }
         p1, p2 = self.export_table(
@@ -237,7 +240,7 @@ class ReportArtifactExporter:
             p1, p2 = self.export_table(
                 df_sub,
                 "table9_per_subject_loso_results",
-                "Subject-Wise Leave-One-Subject-Out (LOSO) Outer Fold Performance",
+                "Held-Out Subject Performance and Sensing-Cost Proxies (Quick Mode Uses One Fold)",
                 "tab:per_subject"
             )
             exported.extend([p1, p2])
@@ -258,28 +261,31 @@ class ReportArtifactExporter:
 
     def generate_narratives(self, experiment_results: Dict[str, Any]) -> None:
         """Generate report-ready Markdown and LaTeX methodology and result narrative summaries."""
-        best_clean = experiment_results.get("best_clean_f1", 0.92)
-        best_faulted = experiment_results.get("best_faulted_f1", 0.88)
-        avg_cost = experiment_results.get("proposed_avg_cost", 0.48)
+        best_clean = experiment_results["best_clean_f1"]
+        best_faulted = experiment_results["best_faulted_f1"]
+        avg_cost = experiment_results["proposed_avg_cost"]
+        all_uniform_clean = next(float(row["Macro-F1"].split(" +/- ")[0])
+            for row in experiment_results["clean_comparison"] if row["Baseline Architecture"] == "All Sensors (Uniform Fusion)")
+        rel_runs = [m for scenario in experiment_results["reliability_detection"].values()
+                    for severity in scenario.values() for m in severity]
+        mean_auroc = float(np.mean([m["auroc"] for m in rel_runs if m["auroc"] is not None]))
         cost_reduction = (1.0 - avg_cost) * 100.0
 
         # results_summary.md
         md_text = f"""# Experimental Results and Empirical Findings
 
 ## 1. Clean-Data Recognition Performance
-On uncorrupted sensor streams, multi-sensor configurations consistently outperform single-sensor anchors.
-The Random Forest ensemble achieved a clean macro-F1 of **{best_clean:.4f}**, demonstrating balanced discriminative capacity across static (sitting, standing, lying) and dynamic activities (walking, running, cycling).
+The proposed Random Forest ensemble achieved a clean macro-F1 of **{best_clean:.4f}** on the configured evaluation split. Compare its baseline rows before claiming superiority.
 
 ## 2. Fault Resilience Under Physical Sensor Degradation
 When subjecting wearable channels to simulated hardware dropout, packet loss, Gaussian noise, stuck-at flatlines, and DC bias drift:
-- Fixed-configuration uniform probability fusion suffered marked accuracy drops, falling victim to corrupted sensors whose arbitrary predictions poisoned the fused decision.
-- The **SensorReliabilityEstimator** successfully identified anomalous sensor windows, achieving an empirical AUROC of **{experiment_results.get('reliability_detection', {}).get('auroc', 0.96):.4f}**.
-- Reliability-weighted fusion safely down-weighted corrupted signals, sustaining a faulted macro-F1 of **{best_faulted:.4f}**.
+- Mean fault-detection AUROC across configured scenarios and folds was **{mean_auroc:.4f}**, comparing clean and injected-fault windows.
+- Proposed macro-F1 under moderate dropout was **{best_faulted:.4f}**. Other fault conditions may be worse; inspect the comparison table.
 
 ## 3. Sensing Cost and Energy Proxy Trade-Off
-The proposed closed-loop **Adaptive Sensing Policy** activated auxiliary sensors (chest, ankle) only when the wrist anchor exhibited degraded reliability ($r_i < 0.40$) or when fused activity prediction uncertainty spiked ($u(t) \\ge 0.65$).
+The proposed closed-loop **Adaptive Sensing Policy** activated auxiliary sensors in response to degraded reliability, high uncertainty, or periodic probing, subject to the configured budget.
 - Across the evaluated continuous sequences, the proposed method maintained an average normalized sensing cost of **{avg_cost:.2f}** (relative to 1.00 for always-on multi-sensor operation), representing a **{cost_reduction:.1f}% reduction** in active sensor activation.
-- Chattering was successfully eliminated through the minimum dwell-time constraint (4 windows), maintaining an average switching frequency below 0.05 transitions per sensing window.
+- Switching behavior is reported in the cost comparison table; a dwell constraint does not guarantee zero oscillation.
 
 ## 4. Key Limitations and Experimental Realism
 - SENSING COST PROXY: All reported cost metrics reflect normalized sensor duty-cycling proxies, not direct physical battery hardware measurements.
@@ -293,17 +299,15 @@ The proposed closed-loop **Adaptive Sensing Policy** activated auxiliary sensors
 \\label{{sec:results}}
 
 \\subsection{{Clean-Data Recognition Baseline}}
-On uncorrupted multi-modal motion streams, combining spatial wearable IMUs improves classification boundaries between subtly distinct postures.
-The Random Forest classifier achieved a benchmark clean macro-F1 score of {best_clean:.4f}, while the CNN-LSTM hybrid achieved competitive temporal representation.
+The proposed Random Forest method obtained clean macro-F1 {best_clean:.4f} on the configured evaluation split.
 
 \\subsection{{Fault Resilience Under Simulated Sensor Failure}}
-When subjected to controlled hardware dropout, intermittent packet losses, Gaussian high-frequency noise, stuck-at flatline faults, and sensor bias drift, baseline uniform fusion degraded sharply.
-In contrast, our proposed reliability-gated architecture reliably isolated corrupted channels, maintaining a faulted macro-F1 score of {best_faulted:.4f}.
-The \\textit{{SensorReliabilityEstimator}} yielded an AUROC of {experiment_results.get('reliability_detection', {}).get('auroc', 0.96):.4f} without accessing ground-truth fault masks.
+For moderate dropout, the proposed method obtained macro-F1 {best_faulted:.4f}. Results for other injected faults are tabulated separately.
+The \\textit{{SensorReliabilityEstimator}} obtained mean AUROC {mean_auroc:.4f} when clean and injected-fault windows were compared; injected labels were used only for evaluation.
 
 \\subsection{{Sensing Efficiency and Cost Savings}}
-By coupling per-sensor reliability estimates with fused Shannon entropy uncertainty, the runtime controller activated secondary nodes only when required.
-The normalized sensing cost proxy $C(t)$ was reduced to {avg_cost:.2f} (a {cost_reduction:.1f}\\% reduction compared to always-active sensing) while preserving resilient HAR accuracy.
+The runtime controller responded to reliability, entropy, budget, and periodic probes.
+The normalized sensing cost proxy $C(t)$ was {avg_cost:.2f} (a {cost_reduction:.1f}\\% reduction compared to always-active sensing). The all-sensor uniform clean macro-F1 was {all_uniform_clean:.4f}, compared with {best_clean:.4f} for the adaptive method.
 """
         with open(self.output_dir / "results_summary.tex", "w", encoding="utf-8") as f:
             f.write(tex_text)
@@ -325,21 +329,19 @@ The normalized sensing cost proxy $C(t)$ was reduced to {avg_cost:.2f} (a {cost_
             f.write(method_text)
 
         # figure_captions.md
-        fig_cap = """# IEEE Figure Captions and Discussion
+        fig_cap = """# Saved Figure Captions and Provenance
 
-- **Figure 1 (`fig1_activity_distribution.png`)**: Class distribution of usable protocol windows across the 6 target activities (Lying, Sitting, Standing, Walking, Running, Cycling).
-- **Figure 2 (`fig2_clean_confusion_matrix_rf.png`)**: Confusion matrix for the Sensor-Wise Random Forest ensemble on clean test subjects under LOSO cross-validation.
-- **Figure 3 (`fig3_clean_confusion_matrix_cnn.png`)**: Confusion matrix for the Sensor-Wise CNN-LSTM hybrid model on clean test subjects.
-- **Figure 4 (`fig4_faulted_confusion_matrix.png`)**: Confusion matrix under severe sensor fault injection demonstrating resilience of reliability-gated fusion.
-- **Figure 5 (`fig5_macro_f1_vs_severity.png`)**: Macro-F1 recognition accuracy as a function of fault corruption severity (0.0 to 1.0) comparing the five baselines.
-- **Figure 6 (`fig6_fault_type_comparison.png`)**: Robustness profile across different fault modes: dropout, intermittent loss, Gaussian noise, flatline, and drift.
-- **Figure 7 (`fig7_cost_vs_macro_f1.png`)**: Pareto trade-off between normalized sensing cost proxy $C(t)$ and faulted Macro-F1 score.
-- **Figure 8 (`fig8_active_sensor_ratio.png`)**: Mean active-sensor ratio comparing static and adaptive sensing strategies.
-- **Figure 9 (`fig9_reliability_timeline.png`)**: Chronological trajectory of estimated sensor reliability scores $r_i(t)$ following fault injection.
-- **Figure 10 (`fig10_activation_timeline.png`)**: Closed-loop sensor activation/deactivation decisions over a representative 100-window test sequence.
-- **Figure 11 (`fig11_cnn_training_curves.png`)**: PyTorch CNN-LSTM training and validation loss progression with early stopping.
-- **Figure 12 (`fig12_rf_feature_importance.png`)**: Top Gini feature importances for the Random Forest classifier.
-- **Figure 13 (`fig13_inference_latency.png`)**: Per-window inference latency across the evaluated classifiers.
+- **Figure 1 (`fig1_activity_distribution.png`)**: Counts of selected activity samples in the evaluated official protocol files; these are rows, not overlapping windows.
+- **Figure 2 (`fig2_clean_confusion_matrix_rf.png`)**: Adaptive random-forest confusion matrix for the clean first held-out fold only.
+- **Figure 3 (`fig3_clean_confusion_matrix_cnn.png`)**: Adaptive CNN--LSTM confusion matrix for the clean first held-out fold only.
+- **Figure 4 (`fig4_faulted_confusion_matrix.png`)**: Adaptive random-forest confusion matrix for the final fold under moderate wrist dropout.
+- **Figure 5 (`fig5_macro_f1_vs_severity.png`)**: Mean macro-F1 for three all-sensor/adaptive strategies under clean data and three wrist-dropout severities.
+- **Figure 7 (`fig7_cost_vs_macro_f1.png`)**: Clean mean macro-F1 versus normalized sensing-cost proxy for five random-forest strategies.
+- **Figure 9 (`fig9_reliability_and_activation_timeline.png`)**: Reliability scores and activation masks from the final-fold moderate wrist-dropout adaptive run.
+- **Figure 11 (`fig11_cnn_training_curves.png`)**: CNN--LSTM training history from the final held-out fold.
+- **Figure 12 (`fig12_rf_feature_importance.png`)**: Wrist random-forest feature importance from the final held-out fold.
+
+Figures 6, 8, 10, and 13 are not generated and are not referenced by the IEEE manuscript.
 """
         with open(self.output_dir / "figure_captions.md", "w", encoding="utf-8") as f:
             f.write(fig_cap)
@@ -354,8 +356,8 @@ The normalized sensing cost proxy $C(t)$ was reduced to {avg_cost:.2f} (a {cost_
 - **Table 5 (`table5_faulted_recognition_comparison.csv` / `.tex`)**: Faulted recognition performance and degradation in percentage points.
 - **Table 6 (`table6_reliability_fault_detection.csv` / `.tex`)**: SensorReliabilityEstimator detection AUROC, precision, recall, and false-alarm rate.
 - **Table 7 (`table7_sensing_cost_comparison.csv` / `.tex`)**: Normalized sensing cost proxy and switching statistics.
-- **Table 8 (`table8_model_latency_computation.csv` / `.tex`)**: Training duration and per-window inference latency.
-- **Table 9 (`table9_per_subject_loso_results.csv` / `.tex`)**: Leave-one-subject-out (LOSO) cross-validation results across all evaluation subjects.
+- **Table 8 (`table8_model_latency_computation.csv` / `.tex`)**: Host-side training duration for the final fold; per-model inference latency was not measured.
+- **Table 9 (`table9_per_subject_loso_results.csv` / `.tex`)**: Leave-one-subject-out (LOSO) scores with separate clean and moderate-dropout sensing-cost proxies.
 - **Table 10 (`table10_proposed_vs_baselines_summary.csv` / `.tex`)**: Comprehensive synthesis of recognition, resilience, and efficiency metrics.
 """
         with open(self.output_dir / "table_captions.md", "w", encoding="utf-8") as f:

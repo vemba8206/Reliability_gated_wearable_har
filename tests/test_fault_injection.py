@@ -22,7 +22,7 @@ def test_dropout_fault():
     sim = SensorFaultSimulator(random_seed=42)
     w = np.ones((256, 6)) * 5.0
     out, meta = sim.inject_fault(w, "dropout", severity=1.0)
-    assert np.all(out == 0.0)
+    assert np.isnan(out).all()
 
 
 def test_flatline_fault():

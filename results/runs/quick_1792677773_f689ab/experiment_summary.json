@@ -1,0 +1,418 @@
+{
+  "run_id": "quick_1792677773_f689ab",
+  "mode": "quick",
+  "subjects": [
+    101,
+    102,
+    105
+  ],
+  "dataset_manifest": {
+    "subject101.dat": {
+      "sha256": "80b3fffd089c236ae88098df3b906b8d3c67a858023fe4f75045d78612147266",
+      "bytes": 141698539
+    },
+    "subject102.dat": {
+      "sha256": "468f3c6ba3e6e961f383783665265afbcddbbd33a3a84bba0386b7d0d4e3c632",
+      "bytes": 207349310
+    },
+    "subject105.dat": {
+      "sha256": "7837cfede57fe45ec20d553c6c2b0c498ab324daae23bfd202c0ffea9f71a7f6",
+      "bytes": 173773599
+    }
+  },
+  "duration_sec": 140.22360515594482,
+  "best_clean_f1": 0.7539292362894917,
+  "best_faulted_f1": 0.7422602694531181,
+  "proposed_avg_cost": 0.644854586129754,
+  "clean_comparison": [
+    {
+      "Baseline Architecture": "Wrist Only (Single Anchor)",
+      "Classifier": "RF",
+      "Accuracy": "0.5948 +/- 0.0000",
+      "Macro-F1": "0.5713 +/- 0.0000",
+      "Normalized Cost C(t)": "0.33",
+      "Inference Latency (ms)": "0.15"
+    },
+    {
+      "Baseline Architecture": "Wrist + Chest (Static Uniform)",
+      "Classifier": "RF",
+      "Accuracy": "0.8096 +/- 0.0000",
+      "Macro-F1": "0.7694 +/- 0.0000",
+      "Normalized Cost C(t)": "0.67",
+      "Inference Latency (ms)": "0.27"
+    },
+    {
+      "Baseline Architecture": "All Sensors (Uniform Fusion)",
+      "Classifier": "RF",
+      "Accuracy": "0.8565 +/- 0.0000",
+      "Macro-F1": "0.8416 +/- 0.0000",
+      "Normalized Cost C(t)": "1.00",
+      "Inference Latency (ms)": "0.41"
+    },
+    {
+      "Baseline Architecture": "All Sensors (Reliability-Weighted)",
+      "Classifier": "RF",
+      "Accuracy": "0.8557 +/- 0.0000",
+      "Macro-F1": "0.8404 +/- 0.0000",
+      "Normalized Cost C(t)": "1.00",
+      "Inference Latency (ms)": "1.03"
+    },
+    {
+      "Baseline Architecture": "Proposed Reliability-Gated Adaptive",
+      "Classifier": "RF",
+      "Accuracy": "0.7777 +/- 0.0000",
+      "Macro-F1": "0.7539 +/- 0.0000",
+      "Normalized Cost C(t)": "0.64",
+      "Inference Latency (ms)": "35.52"
+    },
+    {
+      "Baseline Architecture": "Proposed Reliability-Gated Adaptive",
+      "Classifier": "CNN-LSTM",
+      "Accuracy": "0.7567 +/- 0.0000",
+      "Macro-F1": "0.7452 +/- 0.0000",
+      "Normalized Cost C(t)": "0.61",
+      "Inference Latency (ms)": "2.20"
+    }
+  ],
+  "faulted_comparison": [
+    {
+      "Fault Scenario (50% Severity)": "Dropout",
+      "All Uniform F1": "0.8563",
+      "All Rel-Weighted F1": "0.8504",
+      "Proposed Adaptive F1": "0.7423",
+      "F1 Degradation (pp)": "1.17 pp",
+      "Normalized Cost C(t)": "0.67"
+    },
+    {
+      "Fault Scenario (50% Severity)": "Intermittent",
+      "All Uniform F1": "0.8588",
+      "All Rel-Weighted F1": "0.8520",
+      "Proposed Adaptive F1": "0.7432",
+      "F1 Degradation (pp)": "1.07 pp",
+      "Normalized Cost C(t)": "0.67"
+    },
+    {
+      "Fault Scenario (50% Severity)": "Noise",
+      "All Uniform F1": "0.7322",
+      "All Rel-Weighted F1": "0.8030",
+      "Proposed Adaptive F1": "0.5449",
+      "F1 Degradation (pp)": "20.90 pp",
+      "Normalized Cost C(t)": "0.64"
+    },
+    {
+      "Fault Scenario (50% Severity)": "Flatline",
+      "All Uniform F1": "0.8467",
+      "All Rel-Weighted F1": "0.8443",
+      "Proposed Adaptive F1": "0.8129",
+      "F1 Degradation (pp)": "-5.90 pp",
+      "Normalized Cost C(t)": "0.66"
+    },
+    {
+      "Fault Scenario (50% Severity)": "Drift",
+      "All Uniform F1": "0.7861",
+      "All Rel-Weighted F1": "0.8079",
+      "Proposed Adaptive F1": "0.5493",
+      "F1 Degradation (pp)": "20.46 pp",
+      "Normalized Cost C(t)": "0.66"
+    },
+    {
+      "Fault Scenario (50% Severity)": "Combined",
+      "All Uniform F1": "0.7291",
+      "All Rel-Weighted F1": "0.8102",
+      "Proposed Adaptive F1": "0.5556",
+      "F1 Degradation (pp)": "19.83 pp",
+      "Normalized Cost C(t)": "0.64"
+    }
+  ],
+  "cost_comparison": [
+    {
+      "Strategy": "Wrist Only (Single Anchor)",
+      "Mean Normalized Cost": "0.33",
+      "Active Sensor Ratio": "0.33",
+      "Switching Count": "0",
+      "Cost Reduction Proxy": "66.7%"
+    },
+    {
+      "Strategy": "Wrist + Chest (Static Uniform)",
+      "Mean Normalized Cost": "0.67",
+      "Active Sensor Ratio": "0.67",
+      "Switching Count": "0",
+      "Cost Reduction Proxy": "33.3%"
+    },
+    {
+      "Strategy": "All Sensors (Uniform Fusion)",
+      "Mean Normalized Cost": "1.00",
+      "Active Sensor Ratio": "1.00",
+      "Switching Count": "0",
+      "Cost Reduction Proxy": "0.0%"
+    },
+    {
+      "Strategy": "All Sensors (Reliability-Weighted)",
+      "Mean Normalized Cost": "1.00",
+      "Active Sensor Ratio": "1.00",
+      "Switching Count": "0",
+      "Cost Reduction Proxy": "0.0%"
+    },
+    {
+      "Strategy": "Proposed Reliability-Gated Adaptive",
+      "Mean Normalized Cost": "0.64",
+      "Active Sensor Ratio": "0.64",
+      "Switching Count": "49",
+      "Cost Reduction Proxy": "35.5%"
+    }
+  ],
+  "latency_comparison": [
+    {
+      "Model": "Wrist RF",
+      "Parameters / Trees": "50",
+      "Training Time (s)": "0.24",
+      "Inference Latency (ms)": "not measured"
+    },
+    {
+      "Model": "Chest RF",
+      "Parameters / Trees": "50",
+      "Training Time (s)": "0.21",
+      "Inference Latency (ms)": "not measured"
+    },
+    {
+      "Model": "Ankle RF",
+      "Parameters / Trees": "50",
+      "Training Time (s)": "0.22",
+      "Inference Latency (ms)": "not measured"
+    },
+    {
+      "Model": "Wrist CNN-LSTM",
+      "Parameters / Trees": "see checkpoint",
+      "Training Time (s)": "3.92",
+      "Inference Latency (ms)": "not measured"
+    },
+    {
+      "Model": "Chest CNN-LSTM",
+      "Parameters / Trees": "see checkpoint",
+      "Training Time (s)": "2.23",
+      "Inference Latency (ms)": "not measured"
+    },
+    {
+      "Model": "Ankle CNN-LSTM",
+      "Parameters / Trees": "see checkpoint",
+      "Training Time (s)": "2.19",
+      "Inference Latency (ms)": "not measured"
+    }
+  ],
+  "per_subject_results": [
+    {
+      "Subject ID": "Subject 105",
+      "Clean Macro-F1": "0.7539",
+      "Faulted Macro-F1 (Dropout)": "0.7423",
+      "Normalized Cost": "0.67"
+    }
+  ],
+  "overall_synthesis": [
+    {
+      "Dimension": "Clean Macro-F1",
+      "All Uniform Baseline": "0.8416",
+      "Proposed Adaptive": "0.7539",
+      "Advantage": "-8.8 pp"
+    },
+    {
+      "Dimension": "Faulted Macro-F1 (50% Dropout)",
+      "All Uniform Baseline": "0.8563",
+      "Proposed Adaptive": "0.7423",
+      "Advantage": "-11.4 pp"
+    },
+    {
+      "Dimension": "Normalized Sensing Cost",
+      "All Uniform Baseline": "1.00",
+      "Proposed Adaptive": "0.64",
+      "Advantage": "35.5% reduction"
+    },
+    {
+      "Dimension": "Fault Detection AUROC",
+      "All Uniform Baseline": "N/A",
+      "Proposed Adaptive": "see fault scenarios",
+      "Advantage": "not aggregated"
+    },
+    {
+      "Dimension": "Switches per test window",
+      "All Uniform Baseline": "0",
+      "Proposed Adaptive": "0.0411",
+      "Advantage": "measured proxy"
+    }
+  ],
+  "reliability_detection": {
+    "dropout": {
+      "mild": [
+        {
+          "auroc": 0.9481371897662267,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "false_alarm_rate": 0.0
+        }
+      ],
+      "moderate": [
+        {
+          "auroc": 1.0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "false_alarm_rate": 0.0
+        }
+      ],
+      "severe": [
+        {
+          "auroc": 1.0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "false_alarm_rate": 0.0
+        }
+      ]
+    },
+    "intermittent": {
+      "mild": [
+        {
+          "auroc": 0.9548591561190937,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "false_alarm_rate": 0.0
+        }
+      ],
+      "moderate": [
+        {
+          "auroc": 1.0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "false_alarm_rate": 0.0
+        }
+      ],
+      "severe": [
+        {
+          "auroc": 1.0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "false_alarm_rate": 0.0
+        }
+      ]
+    },
+    "noise": {
+      "mild": [
+        {
+          "auroc": 0.9983249628395117,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "false_alarm_rate": 0.0
+        }
+      ],
+      "moderate": [
+        {
+          "auroc": 1.0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "false_alarm_rate": 0.0
+        }
+      ],
+      "severe": [
+        {
+          "auroc": 1.0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "false_alarm_rate": 0.0
+        }
+      ]
+    },
+    "flatline": {
+      "mild": [
+        {
+          "auroc": 0.49807159587405975,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "false_alarm_rate": 0.0
+        }
+      ],
+      "moderate": [
+        {
+          "auroc": 0.4835223497815414,
+          "precision": 1.0,
+          "recall": 0.0008389261744966443,
+          "f1": 0.0016764459346186086,
+          "false_alarm_rate": 0.0
+        }
+      ],
+      "severe": [
+        {
+          "auroc": 0.459023523715148,
+          "precision": 1.0,
+          "recall": 0.016778523489932886,
+          "f1": 0.033003300330033,
+          "false_alarm_rate": 0.0
+        }
+      ]
+    },
+    "drift": {
+      "mild": [
+        {
+          "auroc": 0.3845463042205306,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "false_alarm_rate": 0.0
+        }
+      ],
+      "moderate": [
+        {
+          "auroc": 0.9346981836403766,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "false_alarm_rate": 0.0
+        }
+      ],
+      "severe": [
+        {
+          "auroc": 1.0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "false_alarm_rate": 0.0
+        }
+      ]
+    },
+    "combined": {
+      "mild": [
+        {
+          "auroc": 0.9999901468402324,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "false_alarm_rate": 0.0
+        }
+      ],
+      "moderate": [
+        {
+          "auroc": 1.0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "false_alarm_rate": 0.0
+        }
+      ],
+      "severe": [
+        {
+          "auroc": 1.0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "false_alarm_rate": 0.0
+        }
+      ]
+    }
+  }
+}

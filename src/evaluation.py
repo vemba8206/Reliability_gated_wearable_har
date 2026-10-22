@@ -24,6 +24,11 @@ def compute_classification_metrics(
     """Calculate comprehensive classification metrics."""
     acc = float(accuracy_score(y_true, y_pred))
     macro_f1 = float(f1_score(y_true, y_pred, average="macro", zero_division=0))
+    # Keep the historical observed-label score above for compatibility, but
+    # expose a fixed-label score for comparisons across folds with missing classes.
+    macro_f1_all_classes = float(f1_score(
+        y_true, y_pred, labels=canonical_classes, average="macro", zero_division=0
+    ))
     weighted_f1 = float(f1_score(y_true, y_pred, average="weighted", zero_division=0))
     macro_prec = float(precision_score(y_true, y_pred, average="macro", zero_division=0))
     macro_rec = float(recall_score(y_true, y_pred, average="macro", zero_division=0))
@@ -48,6 +53,7 @@ def compute_classification_metrics(
     return {
         "accuracy": acc,
         "macro_f1": macro_f1,
+        "macro_f1_all_classes": macro_f1_all_classes,
         "weighted_f1": weighted_f1,
         "macro_precision": macro_prec,
         "macro_recall": macro_rec,
@@ -75,9 +81,9 @@ def compute_reliability_detection_metrics(
         if len(np.unique(y_true_fault)) > 1:
             auroc = float(roc_auc_score(y_true_fault, anomaly_scores))
         else:
-            auroc = 1.0 if y_true_fault[0] == 0 else 0.5
+            auroc = None  # AUROC is undefined with a single ground-truth class.
     except Exception:
-        auroc = 0.5
+        auroc = None
 
     prec = float(precision_score(y_true_fault, y_pred_fault, zero_division=0))
     rec = float(recall_score(y_true_fault, y_pred_fault, zero_division=0))

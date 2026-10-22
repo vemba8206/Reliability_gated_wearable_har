@@ -1,6 +1,6 @@
 Dimension,All Uniform Baseline,Proposed Adaptive,Advantage
-Clean Macro-F1,0.7376,0.7980,Comparable (+0.01)
-Faulted Macro-F1 (50% Dropout),0.4788,0.5176,+3.9 pp
-Normalized Sensing Cost,1.00,0.52,47.6% reduction
-Fault Detection AUROC,N/A,0.9620,Observable isolation
-Chattering Resistance,0 switches,< 0.05 switches/win,High dwell stability
+Clean Macro-F1,0.8891,0.8574,-3.2 pp
+Faulted Macro-F1 (50% Dropout),0.8501,0.7919,-5.8 pp
+Normalized Sensing Cost,1.00,0.53,47.2% reduction
+Fault Detection AUROC,N/A,0.8882,across injected faults
+Switches per test window,0,0.1124,observed mask toggles
